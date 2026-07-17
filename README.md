@@ -88,7 +88,7 @@ to clear the saved credentials and show the picker again.
 
 Each example is a full, board-specific sketch: display/touch/LVGL bring-up
 plus a call into `TouchWifiProvisioner::begin()`, ending in a green
-"Connected" screen with the IP address once online. The bring-up section is
+"Connected" screen with the SSID and IP address once online. The bring-up section is
 what changes per board - swap it for your own display/touch setup and
 `TouchWifiProvisioner::begin()`/`loop()` still work unmodified, per
 [Portability](#portability) above.
