@@ -5,7 +5,7 @@
   "keywords": ["wifi", "lvgl", "provisioning", "esp32", "touchscreen"],
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/Grey-Lancaster/TouchWifiProvisioner.git"
   },
   "frameworks": "arduino",
   "platforms": "espressif32",
