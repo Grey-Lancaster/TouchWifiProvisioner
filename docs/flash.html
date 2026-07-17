@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Try it now - TouchWifiProvisioner</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📶</text></svg>">
+
+<meta name="description" content="Flash the TouchWifiProvisioner demo firmware straight from your browser - no Arduino IDE or PlatformIO install needed.">
+<link rel="canonical" href="https://grey-lancaster.github.io/TouchWifiProvisioner/flash.html">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EVY6JW02BV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-EVY6JW02BV');
+</script>
+
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+
+<style>
+  :root {
+    --bg: #0c0e14;
+    --bg-panel: #14171f;
+    --card: #1f2430;
+    --card-hover: #2a3040;
+    --accent: #2196F3;
+    --accent-dark: #1769aa;
+    --text: #ffffff;
+    --text-muted: #9aa0ab;
+    --border: #2a2f3d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  header {
+    padding: 70px 0 20px;
+    text-align: center;
+  }
+
+  .back-link {
+    display: inline-block;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 22px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    margin: 0 0 14px;
+    letter-spacing: -0.02em;
+  }
+
+  .tagline {
+    font-size: clamp(15px, 2vw, 18px);
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .requirements {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    max-width: 560px;
+    margin: 28px auto 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    text-align: left;
+  }
+  .requirements strong { color: var(--text); }
+
+  .boards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    padding: 50px 0 80px;
+  }
+
+  .board-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .board-card h2 {
+    font-size: 19px;
+    margin: 0;
+  }
+  .board-card .subtitle {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    margin: -8px 0 4px;
+  }
+  .board-card p {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+    flex: 1;
+  }
+
+  esp-web-install-button {
+    display: block;
+  }
+
+  button[slot="activate"] {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  button[slot="activate"]:hover { background: var(--accent-dark); }
+
+  span[slot="unsupported"], span[slot="not-allowed"] {
+    display: block;
+    font-size: 13.5px;
+    color: #e0a458;
+    background: rgba(224, 164, 88, 0.1);
+    border: 1px solid rgba(224, 164, 88, 0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .board-note {
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .board-note a { color: var(--text-muted); text-decoration: underline; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="back-link" href="index.html">&larr; TouchWifiProvisioner</a>
+    <h1>Try it in your browser</h1>
+    <p class="tagline">
+      Flash a ready-built demo straight from Chrome or Edge over USB &mdash;
+      no Arduino IDE, no PlatformIO, nothing to install.
+    </p>
+    <div class="requirements">
+      <strong>Before you start:</strong> use desktop Chrome or Edge (Web
+      Serial isn't supported on Firefox/Safari or mobile), and connect your
+      board over USB. This flashes a small demo sketch that shows the
+      picker UI and, once connected, a green screen with the network name
+      and IP &mdash; it will overwrite whatever is currently on the board.
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="boards">
+
+    <div class="board-card">
+      <h2>Cheap Yellow Display</h2>
+      <div class="subtitle">ESP32-2432S028R &middot; ST7789 panel</div>
+      <p>
+        The classic 2.8" resistive-touch CYD. This flashes the
+        <code>CYD_BasicConnect</code> example.
+      </p>
+      <esp-web-install-button manifest="firmware/cyd/manifest.json">
+        <button slot="activate">Install on CYD</button>
+        <span slot="unsupported">Your browser doesn't support Web Serial - use desktop Chrome or Edge.</span>
+        <span slot="not-allowed">This page needs to be loaded over HTTPS to flash (it already is here).</span>
+      </esp-web-install-button>
+      <div class="board-note">
+        Assumes the ST7789 panel variant - see the
+        <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner/tree/main/examples/CYD_BasicConnect">example README</a>
+        if your unit turns out to be ILI9341-based.
+      </div>
+    </div>
+
+    <div class="board-card">
+      <h2>CrowPanel Advance 7"</h2>
+      <div class="subtitle">ESP32-S3 &middot; RGB panel + GT911 touch</div>
+      <p>
+        Elecrow's 7" capacitive-touch HMI panel. This flashes the
+        <code>CrowPanel7_BasicConnect</code> example.
+      </p>
+      <esp-web-install-button manifest="firmware/crowpanel7/manifest.json">
+        <button slot="activate">Install on CrowPanel 7"</button>
+        <span slot="unsupported">Your browser doesn't support Web Serial - use desktop Chrome or Edge.</span>
+        <span slot="not-allowed">This page needs to be loaded over HTTPS to flash (it already is here).</span>
+      </esp-web-install-button>
+      <div class="board-note">
+        See the
+        <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner/tree/main/examples/CrowPanel7_BasicConnect">example README</a>
+        for the source and full PlatformIO setup.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner">github.com/Grey-Lancaster/TouchWifiProvisioner</a>
+    &middot; MIT License
+  </div>
+</footer>
+
+</body>
+</html>
