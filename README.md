@@ -88,3 +88,7 @@ to clear the saved credentials and show the picker again.
 
 Credentials are persisted via `Preferences` under the `wifiprov` namespace, so
 they don't collide with the host app's own settings namespace.
+
+## License
+
+[MIT](LICENSE)
