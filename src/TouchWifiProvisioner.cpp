@@ -9,6 +9,41 @@
 namespace {
 const char *PREFS_NAMESPACE = "wifiprov";
 Preferences prefs;
+
+// Color/spacing-only theme - deliberately no custom font sizes. lv_conf.h
+// is host-specific and this library can't assume any font beyond whatever
+// default the host already has enabled, so "prettier" stops at colors,
+// radius, and spacing rather than typography.
+const lv_color_t COLOR_BG = lv_color_hex(0x14171f);
+const lv_color_t COLOR_CARD = lv_color_hex(0x1f2430);
+const lv_color_t COLOR_CARD_PRESSED = lv_color_hex(0x2a3040);
+const lv_color_t COLOR_ACCENT = lv_palette_main(LV_PALETTE_BLUE);
+const lv_color_t COLOR_ACCENT_PRESSED = lv_palette_darken(LV_PALETTE_BLUE, 2);
+const lv_color_t COLOR_TEXT = lv_color_white();
+const lv_color_t COLOR_TEXT_MUTED = lv_color_hex(0x9aa0ab);
+
+void styleScreen(lv_obj_t *screen) {
+  lv_obj_set_style_bg_color(screen, COLOR_BG, 0);
+  lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
+  lv_obj_set_style_pad_row(screen, 14, 0);
+  lv_obj_set_style_pad_top(screen, 20, 0);
+}
+
+void styleListRow(lv_obj_t *btn, bool accent) {
+  lv_obj_set_style_bg_color(btn, COLOR_CARD, 0);
+  lv_obj_set_style_bg_color(btn, COLOR_CARD_PRESSED, LV_STATE_PRESSED);
+  lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(btn, 0, 0);
+  lv_obj_set_style_text_color(btn, accent ? COLOR_ACCENT : COLOR_TEXT, 0);
+  lv_obj_set_style_pad_ver(btn, 12, 0);
+}
+
+void styleActionButton(lv_obj_t *btn, bool primary) {
+  lv_obj_set_style_bg_color(btn, primary ? COLOR_ACCENT : COLOR_CARD, 0);
+  lv_obj_set_style_bg_color(btn, primary ? COLOR_ACCENT_PRESSED : COLOR_CARD_PRESSED, LV_STATE_PRESSED);
+  lv_obj_set_style_radius(btn, 8, 0);
+  lv_obj_set_style_text_color(btn, COLOR_TEXT, 0);
+}
 }
 
 lv_obj_t *TouchWifiProvisioner::_parent = nullptr;
@@ -121,18 +156,27 @@ void TouchWifiProvisioner::showPicker() {
   lv_obj_set_flex_flow(_screen, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_flex_align(_screen, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_all(_screen, 12, 0);
+  styleScreen(_screen);
 
   lv_obj_t *title = lv_label_create(_screen);
-  lv_label_set_text(title, "Select a Wi-Fi network");
+  lv_label_set_text(title, LV_SYMBOL_WIFI "  Select a Wi-Fi Network");
+  lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
 
   _statusLabel = lv_label_create(_screen);
   lv_label_set_text(_statusLabel, "Scanning...");
+  lv_obj_set_style_text_color(_statusLabel, COLOR_TEXT_MUTED, 0);
 
   _list = lv_list_create(_screen);
   lv_obj_set_size(_list, lv_pct(90), lv_pct(75));
   lv_obj_set_flex_grow(_list, 1);
+  lv_obj_set_style_bg_color(_list, COLOR_CARD, 0);
+  lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_width(_list, 0, 0);
+  lv_obj_set_style_radius(_list, 14, 0);
+  lv_obj_set_style_pad_all(_list, 4, 0);
 
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
+  styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
 
   WiFi.scanNetworks(true);
@@ -144,6 +188,7 @@ void TouchWifiProvisioner::populateNetworkList() {
   lv_obj_clean(_list);
 
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
+  styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
 
   std::vector<String> seen;
@@ -161,6 +206,7 @@ void TouchWifiProvisioner::populateNetworkList() {
     bool secure = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
     lv_obj_t *btn = lv_list_add_btn(_list, LV_SYMBOL_WIFI, ssid.c_str());
     lv_obj_set_user_data(btn, (void *)(intptr_t)(secure ? 1 : 0));
+    styleListRow(btn, /*accent=*/false);
     lv_obj_add_event_cb(btn, onListButtonClicked, LV_EVENT_CLICKED, nullptr);
   }
 
@@ -179,31 +225,43 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   _list = nullptr;
 
   lv_obj_t *title = lv_label_create(_screen);
-  lv_label_set_text_fmt(title, "Password for %s", ssid.c_str());
+  lv_label_set_text_fmt(title, LV_SYMBOL_WIFI "  Password for %s", ssid.c_str());
+  lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
 
   _passwordTa = lv_textarea_create(_screen);
   lv_textarea_set_password_mode(_passwordTa, true);
   lv_textarea_set_one_line(_passwordTa, true);
   lv_textarea_set_placeholder_text(_passwordTa, "Password");
   lv_obj_set_width(_passwordTa, lv_pct(90));
+  lv_obj_set_style_bg_color(_passwordTa, COLOR_CARD, 0);
+  lv_obj_set_style_bg_opa(_passwordTa, LV_OPA_COVER, 0);
+  lv_obj_set_style_text_color(_passwordTa, COLOR_TEXT, 0);
+  lv_obj_set_style_border_color(_passwordTa, COLOR_ACCENT, 0);
+  lv_obj_set_style_border_width(_passwordTa, 1, 0);
+  lv_obj_set_style_radius(_passwordTa, 8, 0);
 
   lv_obj_t *showPasswordCb = lv_checkbox_create(_screen);
   lv_checkbox_set_text(showPasswordCb, "Show password");
+  lv_obj_set_style_text_color(showPasswordCb, COLOR_TEXT_MUTED, 0);
+  lv_obj_set_style_bg_color(showPasswordCb, COLOR_ACCENT, LV_PART_INDICATOR | LV_STATE_CHECKED);
   lv_obj_add_event_cb(showPasswordCb, onShowPasswordToggled, LV_EVENT_VALUE_CHANGED, nullptr);
 
   lv_obj_t *btnRow = lv_obj_create(_screen);
   lv_obj_set_size(btnRow, lv_pct(90), LV_SIZE_CONTENT);
   lv_obj_set_style_border_width(btnRow, 0, 0);
+  lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
   lv_obj_set_style_pad_all(btnRow, 0, 0);
   lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
   lv_obj_t *backBtn = lv_btn_create(btnRow);
+  styleActionButton(backBtn, /*primary=*/false);
   lv_obj_add_event_cb(backBtn, onBackClicked, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *backLabel = lv_label_create(backBtn);
   lv_label_set_text(backLabel, LV_SYMBOL_LEFT " Back");
 
   lv_obj_t *connectBtn = lv_btn_create(btnRow);
+  styleActionButton(connectBtn, /*primary=*/true);
   lv_obj_add_event_cb(connectBtn, onConnectClicked, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *connectLabel = lv_label_create(connectBtn);
   lv_label_set_text(connectLabel, "Connect " LV_SYMBOL_OK);

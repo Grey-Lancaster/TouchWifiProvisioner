@@ -94,6 +94,18 @@ to clear the saved credentials and show the picker again.
   Advance 7.0" HMI (ESP32-S3, RGB panel + GT911 touch via LovyanGFX).
   PlatformIO-only.
 
+## Appearance
+
+The picker and password screens use a small built-in dark theme - card-style
+list with rounded corners, a blue accent for the primary action (Rescan,
+Connect), muted grey for status text. This is colors/spacing/radius only,
+never custom font sizes: `lv_conf.h` is host-specific, so the library can't
+assume any font beyond whatever default the host project already has
+enabled. The theme isn't currently configurable - if you need to match a
+specific host app's palette, the styling lives in `styleScreen()`,
+`styleListRow()`, and `styleActionButton()` near the top of
+`TouchWifiProvisioner.cpp`.
+
 ## Storage
 
 Credentials are persisted via `Preferences` under the `wifiprov` namespace, so
