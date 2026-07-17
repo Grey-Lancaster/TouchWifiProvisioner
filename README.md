@@ -34,6 +34,25 @@ lib_deps =
     lvgl/lvgl@^8.3.11
 ```
 
+### Configuring LVGL
+
+This library doesn't ship its own `lv_conf.h` - LVGL only supports one
+config per build, and it's inherently host-specific (color depth, memory
+budget, tick source), so it has to come from the project that owns the
+display, not from a library. Your `lv_conf.h` needs these widgets enabled
+(all on by default in LVGL's stock template, so only a concern if you've
+trimmed it down): `LV_USE_FLEX`, `LV_USE_LIST`, `LV_USE_LABEL`,
+`LV_USE_TEXTAREA`, `LV_USE_KEYBOARD`, `LV_USE_BTNMATRIX`, `LV_USE_CHECKBOX`,
+`LV_USE_BTN`.
+
+Setting up `lv_conf.h` itself is a one-time, per-project LVGL step, not
+specific to this library:
+- **Arduino IDE:** per [LVGL's Arduino docs](https://docs.lvgl.io/8.3/get-started/platforms/arduino.html),
+  copy `lvgl/lv_conf_template.h` to `lv_conf.h` and place it in your
+  sketchbook's `libraries/` folder *next to* (not inside) the `lvgl` folder.
+- **PlatformIO:** place `lv_conf.h` in your project's `include/` folder and
+  add `-DLV_CONF_INCLUDE_SIMPLE` to `build_flags`.
+
 ## Usage
 
 ```cpp
