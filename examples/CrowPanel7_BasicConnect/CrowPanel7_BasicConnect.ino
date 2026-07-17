@@ -20,6 +20,7 @@
 #include <Arduino.h>
 #include <lvgl.h>
 #include <Wire.h>
+#include <WiFi.h>
 #include <TouchWifiProvisioner.h>
 
 LGFX gfx;
@@ -84,6 +85,10 @@ static void showConnectedScreen(const String &ip) {
   lv_label_set_text(title, "Connected");
   lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
   lv_obj_set_style_text_color(title, lv_color_white(), 0);
+
+  lv_obj_t *ssidLabel = lv_label_create(connectedScreen);
+  lv_label_set_text_fmt(ssidLabel, "%s", WiFi.SSID().c_str());
+  lv_obj_set_style_text_color(ssidLabel, lv_color_white(), 0);
 
   lv_obj_t *ipLabel = lv_label_create(connectedScreen);
   lv_label_set_text_fmt(ipLabel, "%s", ip.c_str());
