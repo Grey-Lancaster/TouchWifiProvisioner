@@ -1,0 +1,134 @@
+name: Build Examples
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-cyd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Assemble build project
+        run: |
+          mkdir -p /tmp/build/src /tmp/build/include /tmp/build/lib/TouchWifiProvisioner
+          cp examples/CYD_BasicConnect/CYD_BasicConnect.ino /tmp/build/src/
+          cp -r src /tmp/build/lib/TouchWifiProvisioner/
+          cp library.json library.properties /tmp/build/lib/TouchWifiProvisioner/
+          cp .github/ci/lv_conf.h /tmp/build/include/
+
+      - name: Write platformio.ini
+        run: |
+          cat > /tmp/build/platformio.ini << 'EOF'
+          [env:cyd2usb]
+          platform = espressif32
+          board = esp32dev
+          framework = arduino
+          lib_deps =
+            bodmer/TFT_eSPI@^2.5.33
+            paulstoffregen/XPT2046_Touchscreen
+            lvgl/lvgl@^8.3.11
+          board_build.partitions = min_spiffs.csv
+          build_flags =
+            -I include
+            -DUSER_SETUP_LOADED
+            -DTFT_MISO=12
+            -DTFT_MOSI=13
+            -DTFT_SCLK=14
+            -DTFT_CS=15
+            -DUSE_HSPI_PORT
+            -DTFT_DC=2
+            -DTFT_RST=-1
+            -DTFT_BL=21
+            -DTFT_BACKLIGHT_ON=HIGH
+            -DSPI_FREQUENCY=55000000
+            -DSPI_READ_FREQUENCY=20000000
+            -DSPI_TOUCH_FREQUENCY=2500000
+            -DLOAD_GLCD
+            -DLOAD_FONT2
+            -DLOAD_FONT4
+            -DLOAD_FONT6
+            -DLOAD_FONT7
+            -DLOAD_FONT8
+            -DLOAD_GFXFF
+            -DLV_CONF_INCLUDE_SIMPLE
+            -DST7789_DRIVER
+            -DTFT_INVERSION_OFF
+          EOF
+
+      - name: Build CYD_BasicConnect
+        working-directory: /tmp/build
+        run: pio run -e cyd2usb
+
+  build-crowpanel7:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache vendored PSRAM-speed libs
+        id: cache-libs
+        uses: actions/cache@v4
+        with:
+          path: elecrow_120m_libs
+          key: elecrow-120m-libs-v1
+
+      - name: Fetch vendored PSRAM-speed libs
+        if: steps.cache-libs.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow-repo
+          cp -r elecrow-repo/elecrow_120m_libs .
+
+      - name: Assemble build project
+        run: |
+          mkdir -p /tmp/build/src /tmp/build/include /tmp/build/lib/TouchWifiProvisioner /tmp/build/boards
+          cp examples/CrowPanel7_BasicConnect/CrowPanel7_BasicConnect.ino /tmp/build/src/
+          cp examples/CrowPanel7_BasicConnect/LovyanGFX_Driver.h /tmp/build/src/
+          cp examples/CrowPanel7_BasicConnect/pins_config.h /tmp/build/src/
+          cp examples/CrowPanel7_BasicConnect/boards/*.json /tmp/build/boards/
+          cp examples/CrowPanel7_BasicConnect/partitions.csv /tmp/build/
+          cp examples/CrowPanel7_BasicConnect/sdkconfig.defaults* /tmp/build/
+          cp -r src /tmp/build/lib/TouchWifiProvisioner/
+          cp library.json library.properties /tmp/build/lib/TouchWifiProvisioner/
+          cp .github/ci/lv_conf.h /tmp/build/include/
+          cp -r elecrow_120m_libs /tmp/build/
+
+      - name: Write platformio.ini
+        run: |
+          cat > /tmp/build/platformio.ini << 'EOF'
+          [env:crowpanel7]
+          platform = https://github.com/pioarduino/platform-espressif32.git#backup_Ard_30
+          platform_packages =
+            platformio/framework-arduinoespressif32@https://github.com/espressif/arduino-esp32/releases/download/3.0.2/esp32-3.0.2.zip
+            platformio/framework-arduinoespressif32-libs@file://elecrow_120m_libs
+          board = ESP32-S3-WROOM-1-N16R8
+          framework = arduino
+          board_build.arduino.partitions = partitions.csv
+          board_upload.partitions = partitions.csv
+          build_flags =
+            -DCONFIG_SPIRAM_SPEED_120M=1
+            -DLV_CONF_INCLUDE_SIMPLE
+            -Iinclude
+          lib_deps =
+            lvgl/lvgl@8.3.11
+            lovyan03/LovyanGFX@1.2.19
+          EOF
+
+      - name: Build CrowPanel7_BasicConnect
+        working-directory: /tmp/build
+        run: pio run -e crowpanel7
