@@ -236,6 +236,22 @@
   .connected-screen .ssid { font-size: 13px; opacity: 0.95; }
   .connected-screen .ip { font-size: 13px; opacity: 0.9; font-family: monospace; }
 
+  .signal-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 20px;
+  }
+  .signal-bars span {
+    width: 6px;
+    background: white;
+    border-radius: 2px;
+  }
+  .signal-bars span:nth-child(1) { height: 7px; }
+  .signal-bars span:nth-child(2) { height: 11px; }
+  .signal-bars span:nth-child(3) { height: 15px; }
+  .signal-bars span:nth-child(4) { height: 20px; }
+
   .mockup-note {
     text-align: center;
     color: var(--text-muted);
@@ -300,8 +316,8 @@
       no captive portal, no phone required.
     </p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="flash.html">
-        ⚡ Try it now &mdash; no install needed
+      <a class="btn btn-primary" href="flash.html" title="No Arduino IDE or PlatformIO needed - flashes straight from your browser over USB.">
+        ⚡ Try it now &mdash; just flash it!
       </a>
       <a class="btn btn-ghost" href="https://github.com/Grey-Lancaster/TouchWifiProvisioner">
         View on GitHub
@@ -344,6 +360,7 @@
             <div class="check">✓</div>
             <div class="title">Connected</div>
             <div class="ssid">SSID: HomeNetwork</div>
+            <div class="signal-bars"><span></span><span></span><span></span><span></span></div>
             <div class="ip">192.168.1.42</div>
           </div>
         </div>
