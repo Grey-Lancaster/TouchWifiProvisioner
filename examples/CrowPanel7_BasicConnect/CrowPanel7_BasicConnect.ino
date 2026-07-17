@@ -87,7 +87,7 @@ static void showConnectedScreen(const String &ip) {
   lv_obj_set_style_text_color(title, lv_color_white(), 0);
 
   lv_obj_t *ssidLabel = lv_label_create(connectedScreen);
-  lv_label_set_text_fmt(ssidLabel, "%s", WiFi.SSID().c_str());
+  lv_label_set_text_fmt(ssidLabel, "SSID: %s", WiFi.SSID().c_str());
   lv_obj_set_style_text_color(ssidLabel, lv_color_white(), 0);
 
   lv_obj_t *ipLabel = lv_label_create(connectedScreen);
@@ -96,7 +96,16 @@ static void showConnectedScreen(const String &ip) {
 }
 
 static void onWifiConnected(const String &ip) {
-  Serial.printf("Wifi connected, IP: %s\n", ip.c_str());
+  Serial.println("Wifi connected");
+  Serial.printf("  SSID:    %s\n", WiFi.SSID().c_str());
+  Serial.printf("  IP:      %s\n", ip.c_str());
+  Serial.printf("  Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
+  Serial.printf("  Subnet:  %s\n", WiFi.subnetMask().toString().c_str());
+  Serial.printf("  DNS:     %s\n", WiFi.dnsIP(0).toString().c_str());
+  Serial.printf("  RSSI:    %d dBm\n", WiFi.RSSI());
+  Serial.printf("  Channel: %d\n", WiFi.channel());
+  Serial.printf("  BSSID:   %s\n", WiFi.BSSIDstr().c_str());
+  Serial.printf("  MAC:     %s\n", WiFi.macAddress().c_str());
   showConnectedScreen(ip);
 }
 
