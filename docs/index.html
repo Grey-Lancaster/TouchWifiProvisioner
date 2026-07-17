@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TouchWifiProvisioner</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📶</text></svg>">
+
+<!-- Google Analytics -->
+<!-- TODO: replace G-XXXXXXXXXX with the real Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+
+<style>
+  :root {
+    --bg: #0c0e14;
+    --bg-panel: #14171f;
+    --card: #1f2430;
+    --card-hover: #2a3040;
+    --accent: #2196F3;
+    --accent-dark: #1769aa;
+    --green: #4CAF50;
+    --text: #ffffff;
+    --text-muted: #9aa0ab;
+    --border: #2a2f3d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  header.hero {
+    padding: 100px 0 80px;
+    text-align: center;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(33, 150, 243, 0.18), transparent 60%);
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 14px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: clamp(32px, 6vw, 56px);
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .tagline {
+    font-size: clamp(16px, 2.4vw, 20px);
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 36px;
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-dark); text-decoration: none; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); text-decoration: none; }
+
+  section { padding: 70px 0; }
+  section h2 {
+    font-size: clamp(24px, 3.4vw, 32px);
+    text-align: center;
+    margin: 0 0 8px;
+  }
+  section .section-sub {
+    text-align: center;
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 0 auto 48px;
+  }
+
+  /* ---- device mockups ---- */
+  .screens {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+
+  .device {
+    background: #05060a;
+    border: 10px solid #05060a;
+    border-radius: 22px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px #23262f;
+    width: 280px;
+  }
+
+  .screen-inner {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .device figcaption {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-top: 16px;
+  }
+
+  /* picker mockup */
+  .picker-screen {
+    background: var(--bg-panel);
+    padding: 18px 14px;
+    aspect-ratio: 3/4;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .picker-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .picker-status {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 2px;
+  }
+  .picker-list {
+    background: var(--card);
+    border-radius: 10px;
+    flex: 1;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .picker-row.rescan { color: var(--accent); font-weight: 600; }
+  .picker-row.active { background: var(--card-hover); }
+
+  /* connected mockup */
+  .connected-screen {
+    background: var(--green);
+    aspect-ratio: 3/4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: white;
+  }
+  .connected-screen .check {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+  .connected-screen .title { font-size: 18px; font-weight: 700; }
+  .connected-screen .ip { font-size: 13px; opacity: 0.9; font-family: monospace; }
+
+  .mockup-note {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 28px;
+  }
+
+  /* ---- features ---- */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+  }
+  .feature {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .feature .icon { font-size: 22px; margin-bottom: 10px; }
+  .feature h3 { margin: 0 0 8px; font-size: 17px; }
+  .feature p { margin: 0; color: var(--text-muted); font-size: 14.5px; }
+
+  /* ---- install ---- */
+  pre {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .install-tabs { display: flex; gap: 10px; margin-bottom: 16px; justify-content: center; }
+  .install-tab {
+    font-size: 13px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 14px;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">Arduino / PlatformIO &middot; LVGL &middot; ESP32</span>
+    <h1>Touch<span>Wifi</span>Provisioner</h1>
+    <p class="tagline">
+      On-device Wi-Fi provisioning for LVGL touchscreens. Scan, pick a
+      network, and enter a password with the on-screen keyboard &mdash;
+      no captive portal, no phone required.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/Grey-Lancaster/TouchWifiProvisioner">
+        View on GitHub
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/Grey-Lancaster/TouchWifiProvisioner#installation">
+        Installation
+      </a>
+    </div>
+  </div>
+</header>
+
+<section id="screens">
+  <div class="wrap">
+    <h2>What it looks like</h2>
+    <p class="section-sub">
+      A built-in dark theme for the picker, and a plain green confirmation
+      once the device is online.
+    </p>
+
+    <div class="screens">
+      <figure class="device">
+        <div class="screen-inner">
+          <div class="picker-screen">
+            <div class="picker-title">📶 Select a Wi-Fi Network</div>
+            <div class="picker-status">Tap a network to connect</div>
+            <div class="picker-list">
+              <div class="picker-row rescan">⟳ Rescan</div>
+              <div class="picker-row active">📶 HomeNetwork_5G</div>
+              <div class="picker-row">📶 Neighbors_Wifi</div>
+              <div class="picker-row">📶 IoT_Guest</div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Picker &mdash; scan &amp; select</figcaption>
+      </figure>
+
+      <figure class="device">
+        <div class="screen-inner">
+          <div class="connected-screen">
+            <div class="check">✓</div>
+            <div class="title">Connected</div>
+            <div class="ip">192.168.1.42</div>
+          </div>
+        </div>
+        <figcaption>Connected &mdash; on success</figcaption>
+      </figure>
+    </div>
+
+    <p class="mockup-note">
+      Illustrations of the actual on-device UI, not photographs of a screen.
+    </p>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>Why it's different</h2>
+    <p class="section-sub">
+      Built for devices that already have their own screen.
+    </p>
+    <div class="features">
+      <div class="feature">
+        <div class="icon">🖐️</div>
+        <h3>No captive portal</h3>
+        <p>No hotspot, no borrowing a phone's browser. The device shows its own picker and keyboard directly on-screen.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🧩</div>
+        <h3>LVGL-only</h3>
+        <p>Only ever touches LVGL objects and WiFi/Preferences APIs &mdash; never the display bus or touch controller. Works on any panel LVGL can drive.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">📐</div>
+        <h3>Any resolution</h3>
+        <p>Layout uses flex sizing (<code>lv_pct</code>) instead of hardcoded pixel coordinates, so it adapts to whatever screen the host provides.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🔌</div>
+        <h3>Auto-reconnect</h3>
+        <p>Saved credentials are tried first on every boot. On failure &mdash; or none saved yet &mdash; it just re-shows the picker.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <p class="section-sub">Arduino IDE or PlatformIO &mdash; usage code is identical either way.</p>
+
+    <pre><code>lib_deps =
+    https://github.com/Grey-Lancaster/TouchWifiProvisioner.git
+    lvgl/lvgl@^8.3.11</code></pre>
+
+    <pre><code>#include &lt;TouchWifiProvisioner.h&gt;
+
+void onWifiConnected(const String &amp;ip) {
+  Serial.printf("Connected, IP: %s\n", ip.c_str());
+}
+
+void setup() {
+  // ...init display/touch/LVGL first...
+  TouchWifiProvisioner::begin(lv_scr_act(), "Gramps", onWifiConnected);
+}
+
+void loop() {
+  lv_timer_handler();
+  TouchWifiProvisioner::loop();
+}</code></pre>
+
+    <p class="section-sub" style="margin-top:32px;">
+      Full setup steps (Arduino IDE vs. PlatformIO, <code>lv_conf.h</code>
+      requirements) are in the
+      <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner#installation">README</a>.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner">github.com/Grey-Lancaster/TouchWifiProvisioner</a>
+    &middot; MIT License
+  </div>
+</footer>
+
+</body>
+</html>
