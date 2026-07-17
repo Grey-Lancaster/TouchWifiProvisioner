@@ -63,6 +63,50 @@ static void sendI2CCommand(uint8_t command) {
 
 static lv_obj_t *connectedScreen = nullptr;
 
+// Common phone-style RSSI breakpoints (dBm, higher/less-negative = stronger),
+// shared between the on-screen icon and the Serial dump below.
+static int rssiToBars(int32_t rssi) {
+  if (rssi >= -55) return 4;
+  if (rssi >= -65) return 3;
+  if (rssi >= -75) return 2;
+  if (rssi >= -85) return 1;
+  return 0;
+}
+
+static String rssiBarsAscii(int32_t rssi) {
+  int lit = rssiToBars(rssi);
+  String bars;
+  for (int i = 0; i < 4; i++) bars += (i < lit) ? "#" : ".";
+  return bars;
+}
+
+// Classic 4-bar signal-strength icon.
+static lv_obj_t *createSignalBars(lv_obj_t *parent, int32_t rssi) {
+  int lit = rssiToBars(rssi);
+
+  lv_obj_t *cont = lv_obj_create(parent);
+  lv_obj_set_size(cont, 44, 24);
+  lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_width(cont, 0, 0);
+  lv_obj_set_style_pad_all(cont, 0, 0);
+  lv_obj_set_style_pad_column(cont, 3, 0);
+  lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END);
+  lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+
+  static const int heights[4] = {8, 13, 18, 23};
+  for (int i = 0; i < 4; i++) {
+    lv_obj_t *bar = lv_obj_create(cont);
+    lv_obj_set_size(bar, 7, heights[i]);
+    lv_obj_set_style_radius(bar, 2, 0);
+    lv_obj_set_style_border_width(bar, 0, 0);
+    lv_obj_set_style_bg_color(bar, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(bar, i < lit ? LV_OPA_COVER : LV_OPA_30, 0);
+    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+  }
+  return cont;
+}
+
 static void showConnectedScreen(const String &ip) {
   if (connectedScreen) lv_obj_del(connectedScreen);
 
@@ -90,6 +134,8 @@ static void showConnectedScreen(const String &ip) {
   lv_label_set_text_fmt(ssidLabel, "SSID: %s", WiFi.SSID().c_str());
   lv_obj_set_style_text_color(ssidLabel, lv_color_white(), 0);
 
+  createSignalBars(connectedScreen, WiFi.RSSI());
+
   lv_obj_t *ipLabel = lv_label_create(connectedScreen);
   lv_label_set_text_fmt(ipLabel, "%s", ip.c_str());
   lv_obj_set_style_text_color(ipLabel, lv_color_white(), 0);
@@ -102,7 +148,7 @@ static void onWifiConnected(const String &ip) {
   Serial.printf("  Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
   Serial.printf("  Subnet:  %s\n", WiFi.subnetMask().toString().c_str());
   Serial.printf("  DNS:     %s\n", WiFi.dnsIP(0).toString().c_str());
-  Serial.printf("  RSSI:    %d dBm\n", WiFi.RSSI());
+  Serial.printf("  RSSI:    %d dBm  [%s]\n", WiFi.RSSI(), rssiBarsAscii(WiFi.RSSI()).c_str());
   Serial.printf("  Channel: %d\n", WiFi.channel());
   Serial.printf("  BSSID:   %s\n", WiFi.BSSIDstr().c_str());
   Serial.printf("  MAC:     %s\n", WiFi.macAddress().c_str());
