@@ -18,6 +18,22 @@ whether that's an RGB parallel panel, an SPI panel, or anything else LVGL can
 drive. Layout uses flex sizing (`lv_pct`) rather than hardcoded pixel
 coordinates so it adapts to whatever screen resolution the host provides.
 
+## Installation
+
+**Arduino IDE:** not in the Library Manager index yet, so install manually -
+either clone this repo into your sketchbook's `libraries/` folder, or
+download it as a ZIP and use Sketch > Include Library > Add .ZIP Library.
+Requires the `lvgl` library (search "lvgl" in the Library Manager) to also
+be installed.
+
+**PlatformIO:** add it to `lib_deps` in `platformio.ini`:
+
+```ini
+lib_deps =
+    https://github.com/Grey-Lancaster/TouchWifiProvisioner.git
+    lvgl/lvgl@^8.3.11
+```
+
 ## Usage
 
 ```cpp
