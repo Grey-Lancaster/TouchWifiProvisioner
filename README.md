@@ -89,6 +89,10 @@ to clear the saved credentials and show the picker again.
 - [`examples/CYD_BasicConnect`](examples/CYD_BasicConnect) - full bring-up on
   the Cheap Yellow Display (TFT_eSPI + XPT2046 + LVGL glue), showing a green
   "Connected" screen with the IP address once online.
+- [`examples/CrowPanel7_BasicConnect`](examples/CrowPanel7_BasicConnect) -
+  same green "Connected" + IP screen, bring-up on the Elecrow CrowPanel
+  Advance 7.0" HMI (ESP32-S3, RGB panel + GT911 touch via LovyanGFX).
+  PlatformIO-only.
 
 ## Storage
 
