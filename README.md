@@ -84,6 +84,12 @@ outside the provisioning screen).
 Call `TouchWifiProvisioner::reset()` (e.g. from a "Forget network" settings button)
 to clear the saved credentials and show the picker again.
 
+## Examples
+
+- [`examples/CYD_BasicConnect`](examples/CYD_BasicConnect) - full bring-up on
+  the Cheap Yellow Display (TFT_eSPI + XPT2046 + LVGL glue), showing a green
+  "Connected" screen with the IP address once online.
+
 ## Storage
 
 Credentials are persisted via `Preferences` under the `wifiprov` namespace, so
