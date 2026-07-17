@@ -55,6 +55,10 @@ specific to this library:
 
 ## Usage
 
+Identical for Arduino IDE and PlatformIO - PlatformIO's `framework = arduino`
+compiles against the same arduino-esp32 core, so this code is unchanged
+either way (drop it into a `.ino` file or `src/main.cpp`, same result).
+
 ```cpp
 #include <TouchWifiProvisioner.h>
 
