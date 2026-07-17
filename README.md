@@ -86,13 +86,33 @@ to clear the saved credentials and show the picker again.
 
 ## Examples
 
-- [`examples/CYD_BasicConnect`](examples/CYD_BasicConnect) - full bring-up on
-  the Cheap Yellow Display (TFT_eSPI + XPT2046 + LVGL glue), showing a green
-  "Connected" screen with the IP address once online.
+Each example is a full, board-specific sketch: display/touch/LVGL bring-up
+plus a call into `TouchWifiProvisioner::begin()`, ending in a green
+"Connected" screen with the IP address once online. The bring-up section is
+what changes per board - swap it for your own display/touch setup and
+`TouchWifiProvisioner::begin()`/`loop()` still work unmodified, per
+[Portability](#portability) above.
+
+**Examples need the library installed alongside them** - they only contain
+the sketch, not `TouchWifiProvisioner.h`/`.cpp` itself. That's normal for
+Arduino libraries: install this repo via one of the methods in
+[Installation](#installation) (which pulls in `src/` too), don't just
+download an `examples/<name>` subfolder on its own.
+
+- **Arduino IDE:** after installing, open via File > Examples >
+  TouchWifiProvisioner > *(example name)*.
+- **PlatformIO:** copy the example's `.ino` (and any companion `.h` files
+  next to it) into your project's `src/`, plus any other files called out in
+  the example's own README (board JSON, partition table, etc.).
+
+Available examples:
+
+- [`examples/CYD_BasicConnect`](examples/CYD_BasicConnect) - Cheap Yellow
+  Display (TFT_eSPI + XPT2046 + LVGL glue). Works with Arduino IDE or
+  PlatformIO.
 - [`examples/CrowPanel7_BasicConnect`](examples/CrowPanel7_BasicConnect) -
-  same green "Connected" + IP screen, bring-up on the Elecrow CrowPanel
-  Advance 7.0" HMI (ESP32-S3, RGB panel + GT911 touch via LovyanGFX).
-  PlatformIO-only.
+  Elecrow CrowPanel Advance 7.0" HMI (ESP32-S3, RGB panel + GT911 touch via
+  LovyanGFX). PlatformIO-only - see that example's README for why.
 
 ## Appearance
 
