@@ -92,7 +92,7 @@ jobs:
         if: steps.cache-libs.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow-repo
-          cp -r elecrow-repo/elecrow_120m_libs .
+          cp -r elecrow-repo/ESP32S3_120M elecrow_120m_libs
 
       - name: Assemble build project
         run: |
