@@ -1,0 +1,15 @@
+{
+  "name": "TouchWifiProvisioner",
+  "version": "0.1.0",
+  "description": "On-device Wi-Fi provisioning UI for LVGL touchscreens (RGB or SPI panels, any resolution) - scan, pick a network, and enter a password with the on-screen keyboard. No AP/captive-portal fallback needed since the device already has its own screen.",
+  "keywords": ["wifi", "lvgl", "provisioning", "esp32", "touchscreen"],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "dependencies": {
+    "lvgl/lvgl": "^8.3.11"
+  }
+}
