@@ -1,0 +1,12 @@
+# ESP-IDF Partition Table
+#
+# Two app slots (ota_0/ota_1) + otadata so /ota can actually flip which one
+# boots - a single "factory" partition can't do OTA at all, since there's
+# nowhere to write the new image while the old one is still running.
+# nvs stays at the same offset/size as before so existing Wi-Fi credentials
+# and settings survive this change.
+# Name,   Type, SubType, Offset,   Size,    Flags
+nvs,      data, nvs,     0x9000,   0x6000,
+otadata,  data, ota,     0xf000,   0x2000,
+app0,     app,  ota_0,   0x20000,  0x300000,
+app1,     app,  ota_1,   0x320000, 0x300000,

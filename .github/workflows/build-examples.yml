@@ -197,3 +197,66 @@ jobs:
       - name: Build CrowPanel7_BasicConnect
         working-directory: /tmp/build
         run: pio run -e crowpanel7
+
+  build-crowpanel7-rollingclock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache vendored PSRAM-speed libs
+        id: cache-libs
+        uses: actions/cache@v4
+        with:
+          path: elecrow_120m_libs
+          key: elecrow-120m-libs-v1
+
+      - name: Fetch vendored PSRAM-speed libs
+        if: steps.cache-libs.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow-repo
+          cp -r elecrow-repo/ESP32S3_120M elecrow_120m_libs
+
+      - name: Assemble build project
+        run: |
+          mkdir -p /tmp/build/src /tmp/build/include /tmp/build/lib/TouchWifiProvisioner /tmp/build/boards
+          cp examples/CrowPanel7_RollingClock/*.ino examples/CrowPanel7_RollingClock/*.h examples/CrowPanel7_RollingClock/*.cpp /tmp/build/src/
+          cp examples/CrowPanel7_RollingClock/boards/*.json /tmp/build/boards/
+          cp examples/CrowPanel7_RollingClock/partitions.csv /tmp/build/
+          cp examples/CrowPanel7_RollingClock/sdkconfig.defaults* /tmp/build/
+          cp -r src /tmp/build/lib/TouchWifiProvisioner/
+          cp library.json library.properties /tmp/build/lib/TouchWifiProvisioner/
+          cp .github/ci/lv_conf_rollingclock.h /tmp/build/include/lv_conf.h
+          cp -r elecrow_120m_libs /tmp/build/
+
+      - name: Write platformio.ini
+        run: |
+          cat > /tmp/build/platformio.ini << 'EOF'
+          [env:crowpanel7]
+          platform = https://github.com/pioarduino/platform-espressif32.git#backup_Ard_30
+          platform_packages =
+            platformio/framework-arduinoespressif32@https://github.com/espressif/arduino-esp32/releases/download/3.0.2/esp32-3.0.2.zip
+            platformio/framework-arduinoespressif32-libs@file://elecrow_120m_libs
+          board = ESP32-S3-WROOM-1-N16R8
+          framework = arduino
+          board_build.arduino.partitions = partitions.csv
+          board_upload.partitions = partitions.csv
+          build_flags =
+            -DCONFIG_SPIRAM_SPEED_120M=1
+            -DLV_CONF_INCLUDE_SIMPLE
+            -Iinclude
+          lib_deps =
+            lvgl/lvgl@8.3.11
+            lovyan03/LovyanGFX@1.2.19
+            ropg/ezTime@^0.8.3
+          EOF
+
+      - name: Build CrowPanel7_RollingClock
+        working-directory: /tmp/build
+        run: pio run -e crowpanel7

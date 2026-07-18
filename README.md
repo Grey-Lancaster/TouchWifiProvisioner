@@ -119,6 +119,9 @@ Available examples:
   what it looks like to hand off from the provisioning flow into an app
   that keeps running afterward, instead of just a static "Connected"
   screen.
+- [`examples/CrowPanel7_RollingClock`](examples/CrowPanel7_RollingClock) -
+  the same rolling-digit clock app, ported to the CrowPanel Advance 7.0".
+  PlatformIO-only, same reason as `CrowPanel7_BasicConnect`.
 
 ## Appearance
 

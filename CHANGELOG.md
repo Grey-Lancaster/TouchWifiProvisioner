@@ -5,6 +5,23 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.6.5] - 2026-07-18
+
+### Added
+- `examples/CrowPanel7_RollingClock` - the rolling-digit clock app ported to
+  the Elecrow CrowPanel Advance 7" HMI. Reuses the same ClockFace/
+  RollingDigit/SettingsPanel/ClockSettings code as `CYD_RollingClock`
+  verbatim (it's plain LVGL, doesn't care about screen size); only the
+  display/touch/backlight bring-up is board-specific.
+- Fourth board card on `flash.html` for this firmware
+- Fourth CI job building this example
+
+### Fixed
+- Documented that this board's toolchain is old-newlib-based, not
+  picolibc-based like the CYD's - it must NOT use the `-D__time_t_defined`
+  build flag that `CYD_RollingClock` needs, or every system header needing
+  `time_t` breaks. Confirmed by testing both ways locally.
+
 ## [0.6.1] - 2026-07-17
 
 ### Added

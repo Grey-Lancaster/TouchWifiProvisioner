@@ -250,6 +250,27 @@
       </div>
     </div>
 
+    <div class="board-card">
+      <h2>CrowPanel 7" &mdash; Rolling Clock</h2>
+      <div class="subtitle">ESP32-S3 &middot; RGB panel + GT911 touch</div>
+      <p>
+        Same CrowPanel 7" as above, but this flashes a full app instead of a
+        connect demo: an odometer-style clock
+        (<code>CrowPanel7_RollingClock</code>) that keeps running after
+        Wi-Fi setup completes.
+      </p>
+      <esp-web-install-button manifest="firmware/crowpanel7rollingclock/manifest.json">
+        <button slot="activate">Install Rolling Clock (CrowPanel 7")</button>
+        <span slot="unsupported">Your browser doesn't support Web Serial - use desktop Chrome or Edge.</span>
+        <span slot="not-allowed">This page needs to be loaded over HTTPS to flash (it already is here).</span>
+      </esp-web-install-button>
+      <div class="board-note">
+        See the
+        <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner/tree/main/examples/CrowPanel7_RollingClock">example README</a>
+        for the source and full PlatformIO setup.
+      </div>
+    </div>
+
   </div>
 </div>
 
