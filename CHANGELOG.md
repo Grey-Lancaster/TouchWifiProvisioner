@@ -5,6 +5,18 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.6.1] - 2026-07-17
+
+### Added
+- `examples/CYD_RollingClock` - a full app example (not just a connect
+  demo): an odometer-style rolling-digit clock on the CYD, showing
+  TouchWifiProvisioner handing off into a real running app instead of a
+  static "Connected" screen. Ported from the LVGL_Rolling_Clock project.
+  Documents the `LV_MEM_CUSTOM` requirement and the ezTime/picolibc
+  `time_t` build flag workaround.
+- Third board card on `flash.html` for the Rolling Clock firmware
+- Third CI job building this example
+
 ## [0.5.7] - 2026-07-17
 
 ### Added

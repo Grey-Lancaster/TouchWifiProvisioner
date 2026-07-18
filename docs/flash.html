@@ -229,6 +229,27 @@
       </div>
     </div>
 
+    <div class="board-card">
+      <h2>CYD &mdash; Rolling Clock</h2>
+      <div class="subtitle">ESP32-2432S028R &middot; ST7789 panel</div>
+      <p>
+        Same CYD as above, but this flashes a full app instead of a connect
+        demo: an odometer-style clock (<code>CYD_RollingClock</code>) that
+        keeps running after Wi-Fi setup completes.
+      </p>
+      <esp-web-install-button manifest="firmware/cydrollingclock/manifest.json">
+        <button slot="activate">Install Rolling Clock</button>
+        <span slot="unsupported">Your browser doesn't support Web Serial - use desktop Chrome or Edge.</span>
+        <span slot="not-allowed">This page needs to be loaded over HTTPS to flash (it already is here).</span>
+      </esp-web-install-button>
+      <div class="board-note">
+        Assumes the ST7789 panel variant, same as the CYD connect demo. See
+        the
+        <a href="https://github.com/Grey-Lancaster/TouchWifiProvisioner/tree/main/examples/CYD_RollingClock">example README</a>
+        for the source.
+      </div>
+    </div>
+
   </div>
 </div>
 

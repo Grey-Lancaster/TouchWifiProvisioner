@@ -114,6 +114,11 @@ Available examples:
   [Elecrow CrowPanel Advance 7.0" HMI](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480)
   (ESP32-S3, RGB panel + GT911 touch via LovyanGFX). PlatformIO-only - see
   that example's README for why.
+- [`examples/CYD_RollingClock`](examples/CYD_RollingClock) - a full app
+  example on the Cheap Yellow Display: an odometer-style clock, showing
+  what it looks like to hand off from the provisioning flow into an app
+  that keeps running afterward, instead of just a static "Connected"
+  screen.
 
 ## Appearance
 
