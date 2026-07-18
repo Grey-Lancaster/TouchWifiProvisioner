@@ -111,8 +111,9 @@ Available examples:
   Display (TFT_eSPI + XPT2046 + LVGL glue). Works with Arduino IDE or
   PlatformIO.
 - [`examples/CrowPanel7_BasicConnect`](examples/CrowPanel7_BasicConnect) -
-  Elecrow CrowPanel Advance 7.0" HMI (ESP32-S3, RGB panel + GT911 touch via
-  LovyanGFX). PlatformIO-only - see that example's README for why.
+  [Elecrow CrowPanel Advance 7.0" HMI](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480)
+  (ESP32-S3, RGB panel + GT911 touch via LovyanGFX). PlatformIO-only - see
+  that example's README for why.
 
 ## Appearance
 
