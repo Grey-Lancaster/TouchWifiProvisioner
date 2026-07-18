@@ -1,6 +1,6 @@
 {
   "name": "TouchWifiProvisioner - CrowPanel7_RollingClock",
-  "version": "0.6.5",
+  "version": "0.6.9",
   "new_install_prompt_erase": true,
   "builds": [
     {

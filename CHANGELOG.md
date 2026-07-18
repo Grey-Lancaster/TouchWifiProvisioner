@@ -5,6 +5,14 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.6.9] - 2026-07-18
+
+### Fixed
+- `CYD_RollingClock` and `CrowPanel7_RollingClock` were only logging the IP
+  address on connect, unlike the BasicConnect examples which dump the full
+  connection info (SSID, gateway, subnet, DNS, RSSI with signal bars,
+  channel, BSSID, MAC). Both clock examples now log the same full block.
+
 ## [0.6.5] - 2026-07-18
 
 ### Added

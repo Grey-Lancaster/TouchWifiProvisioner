@@ -79,8 +79,34 @@ static void sendI2CCommand(uint8_t command) {
   Wire.endTransmission();
 }
 
+// Common phone-style RSSI breakpoints (dBm, higher/less-negative = stronger),
+// same thresholds CrowPanel7_BasicConnect uses for its on-screen bars.
+static int rssiToBars(int32_t rssi) {
+  if (rssi >= -55) return 4;
+  if (rssi >= -65) return 3;
+  if (rssi >= -75) return 2;
+  if (rssi >= -85) return 1;
+  return 0;
+}
+
+static String rssiBarsAscii(int32_t rssi) {
+  int lit = rssiToBars(rssi);
+  String bars;
+  for (int i = 0; i < 4; i++) bars += (i < lit) ? "#" : ".";
+  return bars;
+}
+
 static void onWifiConnected(const String &ip) {
-  Serial.printf("Wifi connected, IP: %s\n", ip.c_str());
+  Serial.println("Wifi connected");
+  Serial.printf("  SSID:    %s\n", WiFi.SSID().c_str());
+  Serial.printf("  IP:      %s\n", ip.c_str());
+  Serial.printf("  Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
+  Serial.printf("  Subnet:  %s\n", WiFi.subnetMask().toString().c_str());
+  Serial.printf("  DNS:     %s\n", WiFi.dnsIP(0).toString().c_str());
+  Serial.printf("  RSSI:    %d dBm  [%s]\n", WiFi.RSSI(), rssiBarsAscii(WiFi.RSSI()).c_str());
+  Serial.printf("  Channel: %d\n", WiFi.channel());
+  Serial.printf("  BSSID:   %s\n", WiFi.BSSIDstr().c_str());
+  Serial.printf("  MAC:     %s\n", WiFi.macAddress().c_str());
 
   Serial.println("Waiting for NTP sync...");
   waitForSync();
