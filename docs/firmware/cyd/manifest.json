@@ -1,6 +1,6 @@
 {
   "name": "TouchWifiProvisioner - CYD_BasicConnect",
-  "version": "0.4.9",
+  "version": "0.5.7",
   "new_install_prompt_erase": true,
   "builds": [
     {

@@ -5,6 +5,14 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.5.7] - 2026-07-17
+
+### Added
+- "Forget Network" button on both examples' connected screen, calling
+  the existing `TouchWifiProvisioner::reset()` - the library itself
+  doesn't render a connected screen at all, so this lives entirely in
+  the examples, not the library
+
 ## [0.5.3] - 2026-07-17
 
 ### Added

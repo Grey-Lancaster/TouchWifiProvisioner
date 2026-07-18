@@ -139,6 +139,17 @@ static void showConnectedScreen(const String &ip) {
   lv_obj_t *ipLabel = lv_label_create(connectedScreen);
   lv_label_set_text_fmt(ipLabel, "%s", ip.c_str());
   lv_obj_set_style_text_color(ipLabel, lv_color_white(), 0);
+
+  lv_obj_t *forgetBtn = lv_btn_create(connectedScreen);
+  lv_obj_set_style_pad_hor(forgetBtn, 14, 0);
+  lv_obj_set_style_pad_ver(forgetBtn, 8, 0);
+  lv_obj_set_style_bg_opa(forgetBtn, LV_OPA_20, 0);
+  lv_obj_set_style_bg_color(forgetBtn, lv_color_white(), 0);
+  lv_obj_set_style_shadow_width(forgetBtn, 0, 0);
+  lv_obj_add_event_cb(forgetBtn, onForgetClicked, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t *forgetLabel = lv_label_create(forgetBtn);
+  lv_label_set_text(forgetLabel, LV_SYMBOL_CLOSE " Forget Network");
+  lv_obj_set_style_text_color(forgetLabel, lv_color_white(), 0);
 }
 
 static void onWifiConnected(const String &ip) {
@@ -153,6 +164,10 @@ static void onWifiConnected(const String &ip) {
   Serial.printf("  BSSID:   %s\n", WiFi.BSSIDstr().c_str());
   Serial.printf("  MAC:     %s\n", WiFi.macAddress().c_str());
   showConnectedScreen(ip);
+}
+
+static void onForgetClicked(lv_event_t *e) {
+  TouchWifiProvisioner::reset();
 }
 
 void setup() {
