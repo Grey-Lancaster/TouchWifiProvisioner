@@ -1,5 +1,6 @@
 .DS_Store
 Thumbs.db
 
-# source asset kept outside the site (see docs/favicon.ico)
+# source assets kept outside the site (see docs/logo.png, docs/favicon.ico)
 /favicon.ico
+/grey fox circle.png
