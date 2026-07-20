@@ -41,7 +41,6 @@ jobs:
           board_build.partitions = min_spiffs.csv
           build_flags =
             -I include
-            -D__time_t_defined
             -DUSER_SETUP_LOADED
             -DTFT_MISO=12
             -DTFT_MOSI=13
