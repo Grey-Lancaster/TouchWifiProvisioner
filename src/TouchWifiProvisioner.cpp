@@ -58,6 +58,7 @@ String TouchWifiProvisioner::_pendingSsid;
 String TouchWifiProvisioner::_pendingPassword;
 unsigned long TouchWifiProvisioner::_connectStartMs = 0;
 TouchWifiProvisioner::State TouchWifiProvisioner::_state = TouchWifiProvisioner::State::Idle;
+int TouchWifiProvisioner::_emptyScanRetries = 0;
 
 TouchWifiProvisioner::ConnectedCallback TouchWifiProvisioner::_onConnected = nullptr;
 TouchWifiProvisioner::StatusCallback TouchWifiProvisioner::_onStatus = nullptr;
@@ -74,6 +75,14 @@ void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
   _onConnected = onConnected;
   _onStatus = onStatus;
 
+  // A bare WiFi.mode(WIFI_STA) right at boot can leave the radio in a
+  // state where the very first scanNetworks() completes with zero
+  // results instead of actually finding anything nearby, on some
+  // toolchain/core combos - a full stop/restart cycle reliably brings
+  // the radio up scan-ready. Same fix as the post-failed-connect
+  // rescan path in loop() below.
+  WiFi.mode(WIFI_OFF);
+  delay(100);
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(_hostname.c_str());
 
@@ -124,9 +133,20 @@ void TouchWifiProvisioner::loop() {
         bool definiteFailure = elapsed > FAIL_FAST_GRACE_MS &&
                                (st == WL_CONNECT_FAILED || st == WL_NO_SSID_AVAIL);
         if (definiteFailure || elapsed > CONNECT_TIMEOUT_MS) {
-          // Stop the in-progress attempt so the picker's scan starts clean
-          // instead of failing against a radio that's still mid-connect.
-          WiFi.disconnect();
+          // A plain WiFi.disconnect() isn't enough here - after a failed
+          // WiFi.begin() (wrong password especially), the ESP32 WiFi driver
+          // can be left in a state where scanNetworks() "completes"
+          // instantly with zero results instead of actually failing, so
+          // the retry-on-WIFI_SCAN_FAILED logic in the Scanning state never
+          // kicks in and the picker looks permanently empty until reboot.
+          // A full stop/restart of the radio is the reliable fix. The
+          // short delay is a deliberate one-time exception to this
+          // library's non-blocking design - it only runs once, right after
+          // a failed connection, not on any hot path.
+          WiFi.disconnect(true);
+          WiFi.mode(WIFI_OFF);
+          delay(100);
+          WiFi.mode(WIFI_STA);
           String why;
           if (st == WL_NO_SSID_AVAIL) {
             why = "Network not found: " + _pendingSsid;
@@ -196,6 +216,7 @@ bool TouchWifiProvisioner::isConnected() {
 void TouchWifiProvisioner::showPicker() {
   teardownUi();
   _state = State::Scanning;
+  _emptyScanRetries = 0;
 
   _screen = lv_obj_create(_parent);
   lv_obj_set_size(_screen, lv_pct(100), lv_pct(100));
@@ -232,6 +253,18 @@ void TouchWifiProvisioner::showPicker() {
 
 void TouchWifiProvisioner::populateNetworkList() {
   int count = WiFi.scanComplete();
+
+  // A scan can "complete" with zero results even though real networks are
+  // in range, if the radio wasn't fully settled when it started (see the
+  // WiFi.mode(WIFI_OFF)/WIFI_STA reset in begin()). Silently retry a few
+  // times before actually telling the user nothing was found.
+  if (count == 0 && _emptyScanRetries < MAX_EMPTY_SCAN_RETRIES) {
+    _emptyScanRetries++;
+    WiFi.scanDelete();
+    WiFi.scanNetworks(true);
+    return;
+  }
+
   lv_obj_clean(_list);
 
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
@@ -372,6 +405,7 @@ void TouchWifiProvisioner::onListButtonClicked(lv_event_t *e) {
 
 void TouchWifiProvisioner::onRescanClicked(lv_event_t *e) {
   lv_obj_clean(_list);
+  _emptyScanRetries = 0;
   WiFi.scanNetworks(true);
   _state = State::Scanning;
   reportStatus("Scanning for networks...");

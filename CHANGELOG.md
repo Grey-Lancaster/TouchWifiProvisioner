@@ -5,6 +5,33 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.8.1] - 2026-07-22
+
+### Fixed
+- Hardware testing found `WiFi.scanNetworks()` could complete with zero
+  results on the very first scan after boot, on some toolchain/core
+  builds - even a real cold reboot didn't self-heal it, and it
+  reproduced on both CYD_BasicConnect and CYD_RollingClock (confirming
+  it's in the shared library, not example-specific). `begin()` now does
+  the same `WiFi.mode(WIFI_OFF)` / `WiFi.mode(WIFI_STA)` reset cycle
+  added in v0.7.7 for the post-failed-connect case, before the very
+  first scan too. Also added a few silent scan retries before actually
+  reporting "no networks found," as a second line of defense.
+- CrowPanel7 examples not yet rebuilt with this fix - tracked as a
+  follow-up.
+
+## [0.7.7] - 2026-07-22
+
+### Fixed
+- After a failed connect (wrong password especially), the picker's rescan
+  could come back permanently empty until a power cycle - a plain
+  `WiFi.disconnect()` wasn't enough to reset the ESP32 WiFi driver, so
+  `scanNetworks()` would "complete" instantly with zero results instead
+  of actually failing, meaning the built-in scan-retry logic never
+  triggered. Now does a full `WiFi.mode(WIFI_OFF)` / `WiFi.mode(WIFI_STA)`
+  cycle before rescanning. Found by hardware testing right after v0.7.3
+  shipped the fail-fast connect-error handling this exposed.
+
 ## [0.7.3] - 2026-07-20
 
 ### Added

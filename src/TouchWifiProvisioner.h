@@ -97,6 +97,7 @@ private:
   static String _pendingPassword;
   static unsigned long _connectStartMs;
   static State _state;
+  static int _emptyScanRetries;
 
   static ConnectedCallback _onConnected;
   static StatusCallback _onStatus;
@@ -108,4 +109,9 @@ private:
   // grace exists because WiFi.status() can briefly report a stale failure
   // state right after WiFi.begin().
   static const unsigned long FAIL_FAST_GRACE_MS = 1500;
+  // A scan can "succeed" with zero results if the radio wasn't fully
+  // settled yet (right after WiFi.mode(WIFI_STA), notably on first boot) -
+  // that's not a real "no networks here" and deserves a few silent
+  // retries before actually telling the user nothing was found.
+  static const int MAX_EMPTY_SCAN_RETRIES = 3;
 };
