@@ -30,7 +30,10 @@ API entirely (`lv_disp_drv_t`/`lv_indev_drv_t` don't exist anymore), so
 this library and every example here won't compile against it. You'll also
 need an `lv_conf.h` in place before anything compiles - see
 [Configuring LVGL](#configuring-lvgl) below, this repo ships a ready-made
-one.
+one. If you're trying the CYD examples, TFT_eSPI needs its own one-time
+config too - this repo ships a ready-made [`User_Setup.h`](User_Setup.h)
+for that as well (see the [`CYD_BasicConnect` example's
+README](examples/CYD_BasicConnect#tft_espi-panel-configuration)).
 
 **PlatformIO:** add it to `lib_deps` in `platformio.ini`:
 

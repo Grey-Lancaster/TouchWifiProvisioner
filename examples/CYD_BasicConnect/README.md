@@ -57,9 +57,12 @@ build_flags =
 ```
 
 **Arduino IDE:** TFT_eSPI reads its config from `User_Setup.h` inside the
-library folder instead of build flags - copy the same defines above into
-that file (or select/adapt one of TFT_eSPI's bundled setups for a 320x240
-ST7789 panel on ESP32).
+library folder instead of build flags - this repo includes a ready-to-use
+[`User_Setup.h`](../../User_Setup.h) at its root with the same settings as
+the `build_flags` above. Replace `TFT_eSPI/User_Setup.h` in your
+sketchbook's `libraries/` folder with it (or select/adapt one of
+TFT_eSPI's bundled setups for a 320x240 ST7789 panel on ESP32, if your
+unit turns out to be ILI9341-based - see above).
 
 Touch (XPT2046) pins are set directly in `CYD_BasicConnect.ino` via
 `#define`, so no extra config is needed for touch on either toolchain.

@@ -5,6 +5,16 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.9.7] - 2026-07-22
+
+### Added
+- Ready-to-use [`User_Setup.h`](User_Setup.h) at the repo root for Arduino
+  IDE users on CYD hardware - TFT_eSPI has the same "no build flags in
+  Arduino IDE" problem `lv_conf.h` had, needing its config baked into an
+  actual file inside the TFT_eSPI library folder instead. Replace
+  `TFT_eSPI/User_Setup.h` in your sketchbook with it and both CYD examples
+  just work.
+
 ## [0.9.3] - 2026-07-22
 
 ### Added
