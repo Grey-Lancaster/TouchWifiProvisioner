@@ -84,6 +84,11 @@ outside the provisioning screen).
 Call `TouchWifiProvisioner::reset()` (e.g. from a "Forget network" settings button)
 to clear the saved credentials and show the picker again.
 
+Optionally call `TouchWifiProvisioner::setOnDisconnected(cb)` to be told when an
+established connection drops. The library then waits for the network to come
+back on its own - it never tears down your app's UI over a transient outage -
+and fires `onConnected` again once it recovers.
+
 ## Examples
 
 Each example is a full, board-specific sketch: display/touch/LVGL bring-up

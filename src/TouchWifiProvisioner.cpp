@@ -61,6 +61,11 @@ TouchWifiProvisioner::State TouchWifiProvisioner::_state = TouchWifiProvisioner:
 
 TouchWifiProvisioner::ConnectedCallback TouchWifiProvisioner::_onConnected = nullptr;
 TouchWifiProvisioner::StatusCallback TouchWifiProvisioner::_onStatus = nullptr;
+TouchWifiProvisioner::DisconnectedCallback TouchWifiProvisioner::_onDisconnected = nullptr;
+
+void TouchWifiProvisioner::setOnDisconnected(DisconnectedCallback cb) {
+  _onDisconnected = cb;
+}
 
 void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
                              ConnectedCallback onConnected, StatusCallback onStatus) {
@@ -102,7 +107,8 @@ void TouchWifiProvisioner::loop() {
   switch (_state) {
     case State::ConnectingStored:
     case State::ConnectingFromPicker: {
-      if (WiFi.status() == WL_CONNECTED) {
+      wl_status_t st = WiFi.status();
+      if (st == WL_CONNECTED) {
         if (_state == State::ConnectingFromPicker) {
           prefs.begin(PREFS_NAMESPACE, false);
           prefs.putString("ssid", _pendingSsid);
@@ -113,9 +119,50 @@ void TouchWifiProvisioner::loop() {
         _state = State::Connected;
         reportStatus("Connected: " + WiFi.localIP().toString());
         if (_onConnected) _onConnected(WiFi.localIP().toString());
+      } else {
+        unsigned long elapsed = millis() - _connectStartMs;
+        bool definiteFailure = elapsed > FAIL_FAST_GRACE_MS &&
+                               (st == WL_CONNECT_FAILED || st == WL_NO_SSID_AVAIL);
+        if (definiteFailure || elapsed > CONNECT_TIMEOUT_MS) {
+          // Stop the in-progress attempt so the picker's scan starts clean
+          // instead of failing against a radio that's still mid-connect.
+          WiFi.disconnect();
+          String why;
+          if (st == WL_NO_SSID_AVAIL) {
+            why = "Network not found: " + _pendingSsid;
+          } else if (st == WL_CONNECT_FAILED) {
+            why = "Couldn't connect to " + _pendingSsid + " - wrong password?";
+          } else {
+            why = "Couldn't connect to " + _pendingSsid;
+          }
+          showPicker();
+          // After showPicker so it lands on the fresh status label (and
+          // stays up during the scan) instead of being overwritten by it.
+          reportStatus(why);
+        }
+      }
+      break;
+    }
+    case State::Connected: {
+      if (WiFi.status() != WL_CONNECTED) {
+        _state = State::WaitingReconnect;
+        _connectStartMs = millis();
+        reportStatus("Wi-Fi connection lost - reconnecting...");
+        if (_onDisconnected) _onDisconnected();
+      }
+      break;
+    }
+    case State::WaitingReconnect: {
+      // Deliberately UI-less: a transient outage must not tear down the
+      // host app's screen. Auto-reconnect does the work; we just nudge it
+      // if it seems to have given up.
+      if (WiFi.status() == WL_CONNECTED) {
+        _state = State::Connected;
+        reportStatus("Reconnected: " + WiFi.localIP().toString());
+        if (_onConnected) _onConnected(WiFi.localIP().toString());
       } else if (millis() - _connectStartMs > CONNECT_TIMEOUT_MS) {
-        reportStatus("Couldn't connect to " + _pendingSsid);
-        showPicker();
+        WiFi.reconnect();
+        _connectStartMs = millis();
       }
       break;
     }
@@ -208,6 +255,15 @@ void TouchWifiProvisioner::populateNetworkList() {
     lv_obj_set_user_data(btn, (void *)(intptr_t)(secure ? 1 : 0));
     styleListRow(btn, /*accent=*/false);
     lv_obj_add_event_cb(btn, onListButtonClicked, LV_EVENT_CLICKED, nullptr);
+    if (!secure) {
+      // LVGL's built-in symbol font has no padlock glyph, so tag the rare
+      // open networks instead of decorating every secured one. Added as a
+      // separate label - lv_list_get_btn_text() returns the first label
+      // (the SSID), so this can't leak into the SSID we connect to.
+      lv_obj_t *openTag = lv_label_create(btn);
+      lv_label_set_text(openTag, "open");
+      lv_obj_set_style_text_color(openTag, COLOR_TEXT_MUTED, 0);
+    }
   }
 
   WiFi.scanDelete();
@@ -231,6 +287,7 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   _passwordTa = lv_textarea_create(_screen);
   lv_textarea_set_password_mode(_passwordTa, true);
   lv_textarea_set_one_line(_passwordTa, true);
+  lv_textarea_set_max_length(_passwordTa, 63); // WPA2 passphrase limit
   lv_textarea_set_placeholder_text(_passwordTa, "Password");
   lv_obj_set_width(_passwordTa, lv_pct(90));
   lv_obj_set_style_bg_color(_passwordTa, COLOR_CARD, 0);
@@ -245,6 +302,14 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   lv_obj_set_style_text_color(showPasswordCb, COLOR_TEXT_MUTED, 0);
   lv_obj_set_style_bg_color(showPasswordCb, COLOR_ACCENT, LV_PART_INDICATOR | LV_STATE_CHECKED);
   lv_obj_add_event_cb(showPasswordCb, onShowPasswordToggled, LV_EVENT_VALUE_CHANGED, nullptr);
+
+  // This screen gets its own status label so "Connecting..." (and any
+  // failure that follows) is visible here too - without it, tapping
+  // Connect left the user staring at a frozen password screen for the
+  // whole connect attempt.
+  _statusLabel = lv_label_create(_screen);
+  lv_label_set_text(_statusLabel, "");
+  lv_obj_set_style_text_color(_statusLabel, COLOR_TEXT_MUTED, 0);
 
   lv_obj_t *btnRow = lv_obj_create(_screen);
   lv_obj_set_size(btnRow, lv_pct(90), LV_SIZE_CONTENT);
@@ -269,6 +334,10 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   _keyboard = lv_keyboard_create(_screen);
   lv_keyboard_set_textarea(_keyboard, _passwordTa);
   lv_obj_set_size(_keyboard, lv_pct(100), lv_pct(45));
+  // The keyboard's own checkmark/close keys should behave like the Connect
+  // and Back buttons - people press those expecting exactly that.
+  lv_obj_add_event_cb(_keyboard, onConnectClicked, LV_EVENT_READY, nullptr);
+  lv_obj_add_event_cb(_keyboard, onBackClicked, LV_EVENT_CANCEL, nullptr);
 }
 
 void TouchWifiProvisioner::teardownUi() {

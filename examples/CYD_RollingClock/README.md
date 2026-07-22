@@ -51,17 +51,23 @@ heap instead:
 #endif
 ```
 
-### ezTime / picolibc build flag
+### ezTime build flag - depends on your toolchain
 
-arduino-esp32's picolibc already defines `time_t`, which collides with
-ezTime's own typedef guard (which only recognizes newlib/glibc). Add this
-to `build_flags` to satisfy the guard and avoid a conflicting-declaration
-error:
+Whether you need a build flag for ezTime depends on which C library your
+PlatformIO platform resolves:
 
-```ini
-build_flags =
-    -D__time_t_defined
-```
+- **Official `espressif32` from the PlatformIO registry** (what a fresh
+  install gets, and what this repo's CI uses): newlib-based - ezTime
+  compiles as-is. **Do not add any flag.**
+- **Picolibc-based platforms** (some pioarduino/community platform
+  builds): picolibc already defines `time_t`, which collides with ezTime's
+  own typedef guard. There - and only there - add
+  `-D__time_t_defined` to `build_flags` to satisfy the guard.
+
+Adding the flag on the wrong (newlib) toolchain breaks the build with
+`unknown type name 'time_t'` errors throughout the system headers, so
+if you're unsure, start without it. Pinning `platform = espressif32@7.0.1`
+matches this repo's CI exactly.
 
 ### TFT_eSPI panel configuration
 

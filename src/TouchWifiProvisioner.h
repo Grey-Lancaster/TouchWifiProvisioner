@@ -34,6 +34,7 @@ class TouchWifiProvisioner {
 public:
   using ConnectedCallback = std::function<void(const String &ip)>;
   using StatusCallback = std::function<void(const String &message)>;
+  using DisconnectedCallback = std::function<void()>;
 
   // Loads saved credentials and tries to connect; if there are none, or the
   // saved network can't be reached within the connect timeout, builds a
@@ -52,12 +53,20 @@ public:
 
   static bool isConnected();
 
+  // Optional: fires once when an established connection drops. The library
+  // then waits for the connection to come back (nudging WiFi.reconnect()
+  // periodically) without touching the screen - it never tears down the
+  // host app's UI on a transient outage - and fires onConnected again once
+  // the network returns.
+  static void setOnDisconnected(DisconnectedCallback cb);
+
 private:
   enum class State {
     Idle,
     ConnectingStored,
     ConnectingFromPicker,
     Connected,
+    WaitingReconnect,
     Scanning,
     Picker,
   };
@@ -91,6 +100,12 @@ private:
 
   static ConnectedCallback _onConnected;
   static StatusCallback _onStatus;
+  static DisconnectedCallback _onDisconnected;
 
   static const unsigned long CONNECT_TIMEOUT_MS = 15000;
+  // Definitive-failure statuses (wrong password, SSID not found) are honored
+  // after this grace period instead of waiting out the full timeout. The
+  // grace exists because WiFi.status() can briefly report a stale failure
+  // state right after WiFi.begin().
+  static const unsigned long FAIL_FAST_GRACE_MS = 1500;
 };

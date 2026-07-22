@@ -5,6 +5,32 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.7.3] - 2026-07-20
+
+### Added
+- `setOnDisconnected()` - optional callback that fires once when an
+  established connection drops. The library then waits for the network to
+  come back (nudging `WiFi.reconnect()` every 15s) without touching the
+  screen, and fires `onConnected` again on recovery. Previously a drop
+  after connect was silently ignored.
+- Open (passwordless) networks are now tagged "open" in the picker list.
+  (LVGL's built-in symbol font has no padlock glyph, so the rare open
+  networks get marked rather than decorating every secured one.)
+
+### Fixed
+- The password screen now has its own status line, so tapping Connect
+  shows "Connecting..." (and any failure) instead of leaving the screen
+  frozen for the whole attempt
+- The on-screen keyboard's checkmark key now connects and its close key
+  now goes back to the picker - previously both did nothing
+- Wrong passwords and vanished networks now fail fast on
+  `WL_CONNECT_FAILED` / `WL_NO_SSID_AVAIL` with a specific message
+  ("wrong password?" / "Network not found"), instead of always burning
+  the full 15-second timeout with a generic error
+- A failed connect now calls `WiFi.disconnect()` before rescanning, so
+  the picker's scan doesn't race a radio still stuck mid-connect
+- Password entry is capped at 63 characters (the WPA2 passphrase limit)
+
 ## [0.6.9] - 2026-07-18
 
 ### Fixed

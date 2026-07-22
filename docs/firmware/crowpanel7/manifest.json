@@ -1,6 +1,6 @@
 {
   "name": "TouchWifiProvisioner - CrowPanel7_BasicConnect",
-  "version": "0.5.7",
+  "version": "0.7.3",
   "new_install_prompt_erase": true,
   "builds": [
     {
