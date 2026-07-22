@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.9.3] - 2026-07-22
+
+### Added
+- Ready-to-use [`lv_conf.h`](lv_conf.h) at the repo root for Arduino IDE
+  users - copy it into your sketchbook's `libraries/` folder (next to
+  the `lvgl` folder) and every example here just works, no manual
+  widget/font/memory-mode configuration needed. Merges the two slightly
+  different configs the examples were built with in CI into one: uses
+  the malloc-based LVGL heap (`LV_MEM_CUSTOM`) everywhere, since it's
+  strictly safer and CYD_RollingClock needs it anyway.
+- README's Arduino IDE install and LVGL-config sections now point to
+  this file directly instead of just linking to LVGL's own generic
+  template.
+
 ## [0.8.9] - 2026-07-22
 
 ### Fixed

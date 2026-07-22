@@ -27,7 +27,10 @@ Requires the `lvgl` library (search "lvgl" in the Library Manager) to also
 be installed - **pick version 8.3.11 or any other 8.x from the version
 dropdown, not the latest**. LVGL 9 restructured the display/input driver
 API entirely (`lv_disp_drv_t`/`lv_indev_drv_t` don't exist anymore), so
-this library and every example here won't compile against it.
+this library and every example here won't compile against it. You'll also
+need an `lv_conf.h` in place before anything compiles - see
+[Configuring LVGL](#configuring-lvgl) below, this repo ships a ready-made
+one.
 
 **PlatformIO:** add it to `lib_deps` in `platformio.ini`:
 
@@ -50,11 +53,16 @@ trimmed it down): `LV_USE_FLEX`, `LV_USE_LIST`, `LV_USE_LABEL`,
 
 Setting up `lv_conf.h` itself is a one-time, per-project LVGL step, not
 specific to this library:
-- **Arduino IDE:** per [LVGL's Arduino docs](https://docs.lvgl.io/8.3/get-started/platforms/arduino.html),
-  copy `lvgl/lv_conf_template.h` to `lv_conf.h` and place it in your
-  sketchbook's `libraries/` folder *next to* (not inside) the `lvgl` folder.
-- **PlatformIO:** place `lv_conf.h` in your project's `include/` folder and
-  add `-DLV_CONF_INCLUDE_SIMPLE` to `build_flags`.
+- **Arduino IDE:** this repo includes a ready-to-use [`lv_conf.h`](lv_conf.h)
+  at its root with everything every example here needs already enabled -
+  copy *that* file (not LVGL's own template) into your sketchbook's
+  `libraries/` folder, *next to* (not inside) the `lvgl` folder, per
+  [LVGL's Arduino docs](https://docs.lvgl.io/8.3/get-started/platforms/arduino.html).
+  This is a one-time, global setup shared by every sketch that uses lvgl,
+  not per-example - Arduino IDE has no way to place this automatically
+  when you open an example, which is why it isn't done for you.
+- **PlatformIO:** each example already ships its own `include/lv_conf.h` -
+  nothing to set up (see [Examples](#examples) below).
 
 ## Usage
 
