@@ -18,7 +18,7 @@
 #include "LovyanGFX_Driver.h"
 
 #include <Arduino.h>
-#include <lvgl.h>
+#include <lvgl.h>  // version 8.3.11
 #include <Wire.h>
 #include <WiFi.h>
 #include <TouchWifiProvisioner.h>

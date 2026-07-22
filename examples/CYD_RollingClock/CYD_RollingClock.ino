@@ -19,7 +19,7 @@
 #include <TFT_eSPI.h>
 #include <SPI.h>
 #include <XPT2046_Touchscreen.h>
-#include <lvgl.h>
+#include <lvgl.h>  // version 8.3.11
 #include <WiFi.h>
 #include <ezTime.h>
 #include <TouchWifiProvisioner.h>
