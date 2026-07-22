@@ -24,6 +24,12 @@ TouchWifiProvisioner's own saved-credentials storage.
 
 ### lv_conf.h
 
+**Arduino IDE:** the repo-root [`lv_conf.h`](../../lv_conf.h) already covers
+everything below - copy it into your sketchbook's `libraries/` folder, next
+to (not inside) the `lvgl` folder, and skip the rest of this section.
+**PlatformIO:** nothing to do, this example ships its own
+`include/lv_conf.h`.
+
 Same base requirements as the [main README](../../README.md#configuring-lvgl)
 (`LV_USE_FLEX`, `LV_USE_LIST`, `LV_USE_LABEL`, `LV_USE_TEXTAREA`,
 `LV_USE_KEYBOARD`, `LV_USE_BTNMATRIX`, `LV_USE_CHECKBOX`, `LV_USE_BTN`),

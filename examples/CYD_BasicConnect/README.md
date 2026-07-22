@@ -20,10 +20,15 @@ uses and `TouchWifiProvisioner::begin()` still works unmodified.
 
 ### lv_conf.h
 
-Required by TouchWifiProvisioner - see the
-[main README](../../README.md#configuring-lvgl) for placement and required
-widgets (`LV_USE_FLEX`, `LV_USE_LIST`, `LV_USE_LABEL`, `LV_USE_TEXTAREA`,
-`LV_USE_KEYBOARD`, `LV_USE_BTNMATRIX`, `LV_USE_CHECKBOX`, `LV_USE_BTN`).
+Required by TouchWifiProvisioner. **Arduino IDE:** this repo includes a
+ready-to-use [`lv_conf.h`](../../lv_conf.h) at its root - copy it into your
+sketchbook's `libraries/` folder, *next to* (not inside) the `lvgl` folder.
+**PlatformIO:** nothing to do, this example already ships its own
+`include/lv_conf.h`. See the
+[main README](../../README.md#configuring-lvgl) for the full explanation and
+required widgets (`LV_USE_FLEX`, `LV_USE_LIST`, `LV_USE_LABEL`,
+`LV_USE_TEXTAREA`, `LV_USE_KEYBOARD`, `LV_USE_BTNMATRIX`, `LV_USE_CHECKBOX`,
+`LV_USE_BTN`).
 
 ### TFT_eSPI panel configuration
 
