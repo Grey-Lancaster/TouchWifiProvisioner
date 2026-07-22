@@ -24,7 +24,10 @@ coordinates so it adapts to whatever screen resolution the host provides.
 either clone this repo into your sketchbook's `libraries/` folder, or
 download it as a ZIP and use Sketch > Include Library > Add .ZIP Library.
 Requires the `lvgl` library (search "lvgl" in the Library Manager) to also
-be installed.
+be installed - **pick version 8.3.11 or any other 8.x from the version
+dropdown, not the latest**. LVGL 9 restructured the display/input driver
+API entirely (`lv_disp_drv_t`/`lv_indev_drv_t` don't exist anymore), so
+this library and every example here won't compile against it.
 
 **PlatformIO:** add it to `lib_deps` in `platformio.ini`:
 

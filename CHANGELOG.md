@@ -5,6 +5,17 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.8.9] - 2026-07-22
+
+### Fixed
+- Arduino IDE's Library Manager doesn't enforce a version when a
+  dependency has none pinned, so it was installing LVGL 9.x by default -
+  which completely restructured the display/input driver API
+  (`lv_disp_drv_t`/`lv_indev_drv_t` don't exist anymore), breaking every
+  example. `library.properties` now pins `lvgl (^8.3.11)`, and the
+  README calls out explicitly to pick an 8.x version from the Library
+  Manager's version dropdown, not the latest.
+
 ## [0.8.5] - 2026-07-22
 
 ### Added
