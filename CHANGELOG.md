@@ -17,8 +17,8 @@ minor odometer-style once patch would reach double digits (e.g.
   added in v0.7.7 for the post-failed-connect case, before the very
   first scan too. Also added a few silent scan retries before actually
   reporting "no networks found," as a second line of defense.
-- CrowPanel7 examples not yet rebuilt with this fix - tracked as a
-  follow-up.
+- CrowPanel7 examples now rebuilt with this fix too - all four hosted
+  firmwares on flash.html are current with v0.8.1.
 
 ## [0.7.7] - 2026-07-22
 
