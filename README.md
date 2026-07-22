@@ -106,9 +106,11 @@ download an `examples/<name>` subfolder on its own.
 
 - **Arduino IDE:** after installing, open via File > Examples >
   TouchWifiProvisioner > *(example name)*.
-- **PlatformIO:** copy the example's `.ino` (and any companion `.h` files
-  next to it) into your project's `src/`, plus any other files called out in
-  the example's own README (board JSON, partition table, etc.).
+- **PlatformIO:** each example folder already has its own `platformio.ini` -
+  `git clone` this repo, `cd examples/<name>`, `pio run`. No copying files
+  around needed. The CrowPanel7 examples need one extra manual step first
+  (fetching a vendored library - see their own READMEs); the CYD ones need
+  nothing extra at all.
 
 Available examples:
 

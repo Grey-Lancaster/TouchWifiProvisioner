@@ -5,6 +5,21 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.8.5] - 2026-07-22
+
+### Added
+- Every example now ships its own `platformio.ini` (and `include/lv_conf.h`
+  where needed) - `git clone` this repo, `cd examples/<name>`, `pio run`
+  works with no manual file-copying, closing the gap where PlatformIO
+  users previously had to hand-assemble a project per each example's
+  README instructions. Verified against a genuinely fresh clone (no
+  cached local state) for three of the four examples; the fourth uses
+  the identical mechanism.
+- Uses PlatformIO's `lib_extra_dirs` to pull in the library itself from
+  three folders up, and `src_dir = .` since the `.ino` has to stay in the
+  example's own folder (not a `src/` subfolder) for Arduino IDE's
+  File > Examples convention to keep working.
+
 ## [0.8.1] - 2026-07-22
 
 ### Fixed
