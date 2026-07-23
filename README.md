@@ -11,6 +11,15 @@ opens a hotspot and borrows a phone's screen via a web form. A device with its
 own touchscreen doesn't need that: on a failed connection (or no saved
 credentials yet), this library just re-shows the on-device picker directly.
 
+## An easy way to see it
+
+Don't want to build anything yet? [Try it in your browser](https://grey-lancaster.github.io/TouchWifiProvisioner/flash.html)
+(right-click and open in a new tab so you don't lose this page) - it flashes
+a real demo straight onto a CYD or CrowPanel Advance 7" over USB from Chrome
+or Edge, no toolchain or IDE needed. Good for seeing the picker/keyboard flow
+work on real hardware before deciding whether to wire this into your own
+project.
+
 ## Portability
 
 This library only ever touches **LVGL objects** and the **WiFi/Preferences
