@@ -5,6 +5,17 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.3.5] - 2026-07-23
+
+First 1.x release. The public API (`begin()`/`loop()`/`reset()`/
+`setOnDisconnected()`) has been stable since early development - everything
+between here and 0.10.1 was hardware fixes, packaging, and docs, not API
+churn. All four examples (CYD and CrowPanel7, BasicConnect and
+RollingClock) are confirmed working on real hardware, build cleanly from a
+fresh clone with zero manual setup steps, and have working Arduino IDE and
+PlatformIO paths. No functional changes in this release beyond 0.10.1 -
+just marking the milestone.
+
 ## [0.10.1] - 2026-07-23
 
 ### Fixed
