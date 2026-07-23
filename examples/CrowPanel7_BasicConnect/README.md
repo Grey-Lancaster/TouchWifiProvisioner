@@ -92,16 +92,23 @@ mv elecrow_tmp/ESP32S3_120M ./elecrow_120m_libs
 rm -rf elecrow_tmp
 ```
 
-**Windows PowerShell:**
+**Windows PowerShell:** one of the vendored files has a nested path long
+enough to hit Windows' 260-character `MAX_PATH` limit, which breaks a
+plain `git clone`/`Move-Item` - `core.longpaths` fixes the checkout side,
+and `robocopy` (not `Move-Item`) handles the long-path move correctly:
 
 ```powershell
+git config --global core.longpaths true
 git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
 cd elecrow_tmp
 git sparse-checkout set ESP32S3_120M
 cd ..
-Move-Item "elecrow_tmp\ESP32S3_120M" ".\elecrow_120m_libs"
+robocopy "elecrow_tmp\ESP32S3_120M" ".\elecrow_120m_libs" /E /MOVE
 Remove-Item -Recurse -Force elecrow_tmp
 ```
+
+Robocopy's exit code isn't a normal 0/1 pass/fail - anything below 8 means
+it succeeded, so don't be alarmed by a non-zero code here.
 
 End result:
 
