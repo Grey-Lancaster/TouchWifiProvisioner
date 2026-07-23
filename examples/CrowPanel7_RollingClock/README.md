@@ -89,9 +89,54 @@ here unmodified from `CrowPanel7_BasicConnect` - same board, same partition
 layout.
 
 **`elecrow_120m_libs/`** (the vendored prebuilt libs referenced above) is
-not included here - see
-[`CrowPanel7_BasicConnect`'s README](../CrowPanel7_BasicConnect#platformioini)
-for where to get it and how to place it.
+not included here - it's a large binary package, not board config, so it
+has to be fetched once per clone. It needs to end up at
+`examples/CrowPanel7_RollingClock/elecrow_120m_libs/`, next to this
+`platformio.ini`. It's the
+[`ESP32S3_120M`](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480/tree/master/ESP32S3_120M)
+folder from Elecrow's own example repo (their default branch is `master`,
+not `main`), just renamed. A sparse git checkout pulls down just that one
+folder without also grabbing their PCB/3D files - run this **from inside
+this `CrowPanel7_RollingClock` folder**:
+
+**macOS/Linux/Git Bash:**
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
+cd elecrow_tmp
+git sparse-checkout set ESP32S3_120M
+cd ..
+mv elecrow_tmp/ESP32S3_120M ./elecrow_120m_libs
+rm -rf elecrow_tmp
+```
+
+**Windows PowerShell:**
+
+```powershell
+git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
+cd elecrow_tmp
+git sparse-checkout set ESP32S3_120M
+cd ..
+Move-Item "elecrow_tmp\ESP32S3_120M" ".\elecrow_120m_libs"
+Remove-Item -Recurse -Force elecrow_tmp
+```
+
+End result:
+
+```
+examples/CrowPanel7_RollingClock/
+├── platformio.ini
+├── elecrow_120m_libs/
+│   ├── esp32s3/
+│   ├── package.json
+│   ├── tools.json
+│   └── versions.txt
+└── ...
+```
+
+(If you'd rather use a name other than `elecrow_120m_libs`, that's fine -
+just update the `platform_packages` path in the `platformio.ini` above to
+match.)
 
 ## What it does
 
