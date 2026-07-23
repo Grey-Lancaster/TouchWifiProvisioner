@@ -3,6 +3,8 @@
 // HMI, with the on-device Wi-Fi picker handling setup and ezTime handling
 // NTP/timezone once connected.
 //
+// Code by Grey and his buddy Claude.
+//
 // Unlike CrowPanel7_BasicConnect (which just shows a green "Connected"
 // screen), this shows what it looks like to hand off from
 // TouchWifiProvisioner into an app that keeps running afterward: the same

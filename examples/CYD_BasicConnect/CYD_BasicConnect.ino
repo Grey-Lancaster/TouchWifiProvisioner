@@ -1,6 +1,8 @@
 // TouchWifiProvisioner example: connect to Wi-Fi and show a plain green
 // "Connected" screen with the assigned IP address.
 //
+// Code by Grey and his buddy Claude.
+//
 // Tested on the Cheap Yellow Display (ESP32-2432S028R, ST7789 panel,
 // resistive XPT2046 touch). TFT_eSPI drives the display and
 // XPT2046_Touchscreen reads touch, glued into LVGL below -

@@ -1,6 +1,8 @@
 // TouchWifiProvisioner example: connect to Wi-Fi and show a plain green
 // "Connected" screen with the assigned IP address.
 //
+// Code by Grey and his buddy Claude.
+//
 // Tested on the Elecrow CrowPanel Advance 7.0" HMI (ESP32-S3, 800x480 RGB
 // IPS panel, GT911 capacitive touch). LovyanGFX drives the display and
 // touch via the RGB/GT911 config in LovyanGFX_Driver.h, glued into LVGL

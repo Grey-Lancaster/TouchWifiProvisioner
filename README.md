@@ -3,6 +3,8 @@
 On-device Wi-Fi provisioning UI for LVGL touchscreens - scan, pick a network,
 and enter a password with the on-screen keyboard.
 
+Code by Grey and his buddy Claude.
+
 No AP/captive-portal fallback (a la WiFiManager). That pattern exists to work
 around headless devices that have no input method of their own - the device
 opens a hotspot and borrows a phone's screen via a web form. A device with its
