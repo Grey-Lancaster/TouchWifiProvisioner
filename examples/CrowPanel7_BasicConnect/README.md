@@ -73,7 +73,7 @@ build_flags define, to actually take effect.
 **`elecrow_120m_libs/`** (the vendored prebuilt libs referenced above) is
 not included here - it's a large binary package, not board config. Grab
 the
-[`ESP32S3_120M`](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480/tree/main/ESP32S3_120M)
+[`ESP32S3_120M`](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480/tree/master/ESP32S3_120M)
 folder from Elecrow's example repo, rename it to `elecrow_120m_libs`, and
 place it at your project root next to `platformio.ini` (or just update the
 `platform_packages` path above to match whatever name you keep it under).
