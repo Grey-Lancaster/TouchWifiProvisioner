@@ -96,12 +96,15 @@ has to be fetched once per clone. It needs to end up at
 [`ESP32S3_120M`](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480/tree/master/ESP32S3_120M)
 folder from Elecrow's own example repo (their default branch is `master`,
 not `main`), just renamed. A sparse git checkout pulls down just that one
-folder without also grabbing their PCB/3D files - run this **from inside
-this `CrowPanel7_RollingClock` folder**:
+folder without also grabbing their PCB/3D files - these blocks are
+self-contained: the first line puts you in the right place no matter
+where your terminal started, as long as you're somewhere inside this
+repo clone.
 
 **macOS/Linux/Git Bash:**
 
 ```bash
+cd "$(git rev-parse --show-toplevel)/examples/CrowPanel7_RollingClock"
 git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
 cd elecrow_tmp
 git sparse-checkout set ESP32S3_120M
@@ -116,6 +119,7 @@ plain `git clone`/`Move-Item` - `core.longpaths` fixes the checkout side,
 and `robocopy` (not `Move-Item`) handles the long-path move correctly:
 
 ```powershell
+Set-Location "$(git rev-parse --show-toplevel)\examples\CrowPanel7_RollingClock"
 git config --global core.longpaths true
 git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
 cd elecrow_tmp
