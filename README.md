@@ -122,9 +122,7 @@ download an `examples/<name>` subfolder on its own.
   TouchWifiProvisioner > *(example name)*.
 - **PlatformIO:** each example folder already has its own `platformio.ini` -
   `git clone` this repo, `cd examples/<name>`, `pio run`. No copying files
-  around needed. The CrowPanel7 examples need one extra manual step first
-  (fetching a vendored library - see their own READMEs); the CYD ones need
-  nothing extra at all.
+  around, no manual fetch steps, for any example.
 
 Available examples:
 

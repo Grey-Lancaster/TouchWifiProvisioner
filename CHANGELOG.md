@@ -5,6 +5,19 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [0.10.1] - 2026-07-23
+
+### Fixed
+- Both CrowPanel7 examples' `elecrow_120m_libs` (PSRAM-at-120MHz prebuilt
+  framework libs) now fetch automatically like any other dependency -
+  `platform_packages` points at a mirrored copy hosted as a
+  [release asset](https://github.com/Grey-Lancaster/TouchWifiProvisioner/releases/tag/elecrow-libs-1)
+  on this repo (mirrored with Elecrow's permission), instead of requiring
+  a manual git sparse-checkout per clone. That manual step was also the
+  source of a genuine Windows `MAX_PATH` failure (one vendored file's
+  nested path exceeds 260 characters), which is now moot since nothing
+  needs checking out locally at all. `pio run` just works.
+
 ## [0.9.7] - 2026-07-22
 
 ### Added

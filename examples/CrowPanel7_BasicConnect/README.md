@@ -70,66 +70,15 @@ here unmodified from a confirmed-working build on this hardware - the
 120MHz PSRAM speed fix needs the sdkconfig-level flags, not just the
 build_flags define, to actually take effect.
 
-**`elecrow_120m_libs/`** (the vendored prebuilt libs referenced above) is
-not included here - it's a large binary package, not board config, so it
-has to be fetched once per clone. It needs to end up at
-`examples/CrowPanel7_BasicConnect/elecrow_120m_libs/`, next to this
-`platformio.ini`. It's the
+**`elecrow_120m_libs`** (the prebuilt libs referenced above, originally
+Elecrow's
 [`ESP32S3_120M`](https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480/tree/master/ESP32S3_120M)
-folder from Elecrow's own example repo (their default branch is `master`,
-not `main`), just renamed. A sparse git checkout pulls down just that one
-folder without also grabbing their PCB/3D files - these blocks are
-self-contained: the first line puts you in the right place no matter
-where your terminal started, as long as you're somewhere inside this
-repo clone.
-
-**macOS/Linux/Git Bash:**
-
-```bash
-cd "$(git rev-parse --show-toplevel)/examples/CrowPanel7_BasicConnect"
-git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
-cd elecrow_tmp
-git sparse-checkout set ESP32S3_120M
-cd ..
-mv elecrow_tmp/ESP32S3_120M ./elecrow_120m_libs
-rm -rf elecrow_tmp
-```
-
-**Windows PowerShell:** one of the vendored files has a nested path long
-enough to hit Windows' 260-character `MAX_PATH` limit, which breaks a
-plain `git clone`/`Move-Item` - `core.longpaths` fixes the checkout side,
-and `robocopy` (not `Move-Item`) handles the long-path move correctly:
-
-```powershell
-Set-Location "$(git rev-parse --show-toplevel)\examples\CrowPanel7_BasicConnect"
-git config --global core.longpaths true
-git clone --filter=blob:none --sparse https://github.com/Elecrow-RD/CrowPanel-Advance-7-HMI-ESP32-S3-AI-Powered-IPS-Touch-Screen-800x480.git elecrow_tmp
-cd elecrow_tmp
-git sparse-checkout set ESP32S3_120M
-cd ..
-robocopy "elecrow_tmp\ESP32S3_120M" ".\elecrow_120m_libs" /E /MOVE
-Remove-Item -Recurse -Force elecrow_tmp
-```
-
-Robocopy's exit code isn't a normal 0/1 pass/fail - anything below 8 means
-it succeeded, so don't be alarmed by a non-zero code here.
-
-End result:
-
-```
-examples/CrowPanel7_BasicConnect/
-├── platformio.ini
-├── elecrow_120m_libs/
-│   ├── esp32s3/
-│   ├── package.json
-│   ├── tools.json
-│   └── versions.txt
-└── ...
-```
-
-(If you'd rather use a name other than `elecrow_120m_libs`, that's fine -
-just update the `platform_packages` path in the `platformio.ini` above to
-match.)
+from their own example repo) is fetched automatically - `platform_packages`
+above points at a mirrored copy hosted as a
+[release asset](https://github.com/Grey-Lancaster/TouchWifiProvisioner/releases/tag/elecrow-libs-1)
+on this repo (mirrored with permission from Elecrow, since it's a ~220MB
+binary package that doesn't belong in git history). No manual fetch step
+needed - `pio run` handles it like any other dependency.
 
 ## What it does
 
