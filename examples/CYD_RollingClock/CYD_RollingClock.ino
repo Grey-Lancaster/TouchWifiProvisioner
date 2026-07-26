@@ -123,8 +123,14 @@ static void onWifiConnected(const String &ip) {
   myTZ.setLocation(ClockSettings::timezone());
   Serial.println(myTZ.dateTime());
 
-  ClockFace::setup(lv_scr_act(), ClockSettings::is24Hour(), CLOCK_US_DATE);
-  clockActive = true;
+  if (!clockActive) {
+    // onWifiConnected() fires again after any reconnect (a dropped
+    // connection recovering, even briefly) - guard the one-time UI build
+    // so a reconnect doesn't stack a second, now-frozen clock face on top
+    // of the live one. NTP resync above still happens every time.
+    ClockFace::setup(lv_scr_act(), ClockSettings::is24Hour(), CLOCK_US_DATE);
+    clockActive = true;
+  }
 }
 
 void setup() {

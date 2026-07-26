@@ -5,6 +5,21 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.3.9] - 2026-07-26
+
+### Fixed
+- `CYD_RollingClock` and `CrowPanel7_RollingClock` built a second, permanently
+  frozen clock face on top of the live one whenever Wi-Fi dropped and
+  recovered (even briefly, e.g. an overnight router hiccup) - both examples'
+  `onWifiConnected()` called `ClockFace::setup()` unconditionally every time
+  it fired, and the library calls that callback again on every reconnect by
+  design (see `setOnDisconnected()` in the main README). Confirmed on real
+  hardware: a CYD photographed the next morning showing two different times
+  stacked on screen, one rolling and one stuck at whatever moment the
+  overnight reconnect happened. Both examples now guard the one-time UI
+  build with the existing `clockActive` flag - NTP resync still runs on
+  every reconnect, but the clock face itself is only ever built once.
+
 ## [1.3.5] - 2026-07-23
 
 First 1.x release. The public API (`begin()`/`loop()`/`reset()`/
