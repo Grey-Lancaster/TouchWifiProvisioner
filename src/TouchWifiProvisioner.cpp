@@ -85,6 +85,8 @@ void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
   delay(100);
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(_hostname.c_str());
+  Serial.printf("[TouchWifiProvisioner] hostname: %s (try http://%s.local if your network supports mDNS)\n",
+                _hostname.c_str(), _hostname.c_str());
 
   tryStoredCredentials();
 }
@@ -109,6 +111,8 @@ void TouchWifiProvisioner::startConnect(const String &ssid, const String &passwo
   _state = fromPicker ? State::ConnectingFromPicker : State::ConnectingStored;
   _connectStartMs = millis();
   reportStatus("Connecting to " + ssid + "...");
+  Serial.printf("[TouchWifiProvisioner] Connecting to \"%s\"%s\n", ssid.c_str(),
+                fromPicker ? " (from picker)" : " (stored credentials)");
   WiFi.begin(ssid.c_str(), password.c_str());
 }
 
@@ -127,6 +131,8 @@ void TouchWifiProvisioner::loop() {
         teardownUi();
         _state = State::Connected;
         reportStatus("Connected: " + WiFi.localIP().toString());
+        Serial.printf("[TouchWifiProvisioner] Connected: SSID=\"%s\" IP=%s RSSI=%d dBm\n",
+                      WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
         if (_onConnected) _onConnected(WiFi.localIP().toString());
       } else {
         unsigned long elapsed = millis() - _connectStartMs;
@@ -159,6 +165,7 @@ void TouchWifiProvisioner::loop() {
           // After showPicker so it lands on the fresh status label (and
           // stays up during the scan) instead of being overwritten by it.
           reportStatus(why);
+          Serial.println("[TouchWifiProvisioner] " + why);
         }
       }
       break;
@@ -168,6 +175,7 @@ void TouchWifiProvisioner::loop() {
         _state = State::WaitingReconnect;
         _connectStartMs = millis();
         reportStatus("Wi-Fi connection lost - reconnecting...");
+        Serial.println("[TouchWifiProvisioner] Wi-Fi connection lost - reconnecting...");
         if (_onDisconnected) _onDisconnected();
       }
       break;
@@ -179,8 +187,11 @@ void TouchWifiProvisioner::loop() {
       if (WiFi.status() == WL_CONNECTED) {
         _state = State::Connected;
         reportStatus("Reconnected: " + WiFi.localIP().toString());
+        Serial.printf("[TouchWifiProvisioner] Reconnected: SSID=\"%s\" IP=%s RSSI=%d dBm\n",
+                      WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
         if (_onConnected) _onConnected(WiFi.localIP().toString());
       } else if (millis() - _connectStartMs > CONNECT_TIMEOUT_MS) {
+        Serial.println("[TouchWifiProvisioner] Still not reconnected, nudging WiFi.reconnect()...");
         WiFi.reconnect();
         _connectStartMs = millis();
       }
@@ -249,6 +260,7 @@ void TouchWifiProvisioner::showPicker() {
 
   WiFi.scanNetworks(true);
   reportStatus("Scanning for networks...");
+  Serial.println("[TouchWifiProvisioner] Scanning for networks...");
 }
 
 void TouchWifiProvisioner::populateNetworkList() {
@@ -260,11 +272,14 @@ void TouchWifiProvisioner::populateNetworkList() {
   // times before actually telling the user nothing was found.
   if (count == 0 && _emptyScanRetries < MAX_EMPTY_SCAN_RETRIES) {
     _emptyScanRetries++;
+    Serial.printf("[TouchWifiProvisioner] Scan returned 0 networks, retrying (%d/%d)...\n",
+                  _emptyScanRetries, MAX_EMPTY_SCAN_RETRIES);
     WiFi.scanDelete();
     WiFi.scanNetworks(true);
     return;
   }
 
+  Serial.printf("[TouchWifiProvisioner] Scan complete: %d network(s) found\n", count);
   lv_obj_clean(_list);
 
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
@@ -284,6 +299,8 @@ void TouchWifiProvisioner::populateNetworkList() {
     seen.push_back(ssid);
 
     bool secure = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
+    Serial.printf("[TouchWifiProvisioner]   \"%s\" RSSI=%d dBm %s\n", ssid.c_str(),
+                  WiFi.RSSI(i), secure ? "" : "(open)");
     lv_obj_t *btn = lv_list_add_btn(_list, LV_SYMBOL_WIFI, ssid.c_str());
     lv_obj_set_user_data(btn, (void *)(intptr_t)(secure ? 1 : 0));
     styleListRow(btn, /*accent=*/false);
@@ -302,6 +319,7 @@ void TouchWifiProvisioner::populateNetworkList() {
   WiFi.scanDelete();
   _state = State::Picker;
   reportStatus(seen.empty() ? "No networks found - tap Rescan" : "Tap a network to connect");
+  if (seen.empty()) Serial.println("[TouchWifiProvisioner] No networks found");
 }
 
 void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
@@ -409,6 +427,7 @@ void TouchWifiProvisioner::onRescanClicked(lv_event_t *e) {
   WiFi.scanNetworks(true);
   _state = State::Scanning;
   reportStatus("Scanning for networks...");
+  Serial.println("[TouchWifiProvisioner] Rescan requested");
 }
 
 void TouchWifiProvisioner::onConnectClicked(lv_event_t *e) {

@@ -1,5 +1,6 @@
 .DS_Store
 Thumbs.db
+.pio/
 
 # source assets kept outside the site (see docs/logo.png, docs/favicon.ico)
 /favicon.ico

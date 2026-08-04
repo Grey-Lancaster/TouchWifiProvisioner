@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.4.3] - 2026-07-26
+
+### Added
+- The library now logs its whole connection lifecycle to Serial, prefixed
+  `[TouchWifiProvisioner]` so it's distinguishable from whatever the host
+  app also logs: hostname (with an `http://<hostname>.local` hint for
+  mDNS), every scan/rescan and its results (SSID + RSSI, open networks
+  flagged), each connect attempt and whether it came from stored
+  credentials or the picker, success (SSID/IP/RSSI) or the specific
+  failure reason, and disconnect/reconnect events. Previously the library
+  was completely silent on Serial - useful mainly when the on-device
+  screen itself isn't working (or isn't wired up yet) and Serial is the
+  only way to see what's happening.
+
 ## [1.3.9] - 2026-07-26
 
 ### Fixed
