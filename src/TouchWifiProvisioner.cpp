@@ -52,11 +52,14 @@ lv_obj_t *TouchWifiProvisioner::_list = nullptr;
 lv_obj_t *TouchWifiProvisioner::_statusLabel = nullptr;
 lv_obj_t *TouchWifiProvisioner::_passwordTa = nullptr;
 lv_obj_t *TouchWifiProvisioner::_keyboard = nullptr;
+lv_obj_t *TouchWifiProvisioner::_ssidTa = nullptr;
 
 String TouchWifiProvisioner::_hostname;
 String TouchWifiProvisioner::_pendingSsid;
 String TouchWifiProvisioner::_pendingPassword;
 unsigned long TouchWifiProvisioner::_connectStartMs = 0;
+unsigned long TouchWifiProvisioner::_outageStartMs = 0;
+unsigned long TouchWifiProvisioner::_reconnectTimeoutMs = 0;
 TouchWifiProvisioner::State TouchWifiProvisioner::_state = TouchWifiProvisioner::State::Idle;
 int TouchWifiProvisioner::_emptyScanRetries = 0;
 
@@ -66,6 +69,10 @@ TouchWifiProvisioner::DisconnectedCallback TouchWifiProvisioner::_onDisconnected
 
 void TouchWifiProvisioner::setOnDisconnected(DisconnectedCallback cb) {
   _onDisconnected = cb;
+}
+
+void TouchWifiProvisioner::setReconnectTimeout(unsigned long ms) {
+  _reconnectTimeoutMs = ms;
 }
 
 void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
@@ -139,20 +146,7 @@ void TouchWifiProvisioner::loop() {
         bool definiteFailure = elapsed > FAIL_FAST_GRACE_MS &&
                                (st == WL_CONNECT_FAILED || st == WL_NO_SSID_AVAIL);
         if (definiteFailure || elapsed > CONNECT_TIMEOUT_MS) {
-          // A plain WiFi.disconnect() isn't enough here - after a failed
-          // WiFi.begin() (wrong password especially), the ESP32 WiFi driver
-          // can be left in a state where scanNetworks() "completes"
-          // instantly with zero results instead of actually failing, so
-          // the retry-on-WIFI_SCAN_FAILED logic in the Scanning state never
-          // kicks in and the picker looks permanently empty until reboot.
-          // A full stop/restart of the radio is the reliable fix. The
-          // short delay is a deliberate one-time exception to this
-          // library's non-blocking design - it only runs once, right after
-          // a failed connection, not on any hot path.
-          WiFi.disconnect(true);
-          WiFi.mode(WIFI_OFF);
-          delay(100);
-          WiFi.mode(WIFI_STA);
+          resetRadio();
           String why;
           if (st == WL_NO_SSID_AVAIL) {
             why = "Network not found: " + _pendingSsid;
@@ -174,6 +168,7 @@ void TouchWifiProvisioner::loop() {
       if (WiFi.status() != WL_CONNECTED) {
         _state = State::WaitingReconnect;
         _connectStartMs = millis();
+        _outageStartMs = _connectStartMs;
         reportStatus("Wi-Fi connection lost - reconnecting...");
         Serial.println("[TouchWifiProvisioner] Wi-Fi connection lost - reconnecting...");
         if (_onDisconnected) _onDisconnected();
@@ -190,6 +185,15 @@ void TouchWifiProvisioner::loop() {
         Serial.printf("[TouchWifiProvisioner] Reconnected: SSID=\"%s\" IP=%s RSSI=%d dBm\n",
                       WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
         if (_onConnected) _onConnected(WiFi.localIP().toString());
+      } else if (_reconnectTimeoutMs > 0 &&
+                 millis() - _outageStartMs > _reconnectTimeoutMs) {
+        // Opt-in give-up (setReconnectTimeout): hand control back to the
+        // user. Saved credentials stay until a new network connects.
+        String why = "Couldn't reconnect to " + _pendingSsid;
+        Serial.println("[TouchWifiProvisioner] Reconnect timed out - showing picker");
+        resetRadio();
+        showPicker();
+        reportStatus(why);
       } else if (millis() - _connectStartMs > CONNECT_TIMEOUT_MS) {
         Serial.println("[TouchWifiProvisioner] Still not reconnected, nudging WiFi.reconnect()...");
         WiFi.reconnect();
@@ -210,6 +214,21 @@ void TouchWifiProvisioner::loop() {
     default:
       break;
   }
+}
+
+// A plain WiFi.disconnect() isn't enough after a failed WiFi.begin() (wrong
+// password especially) - the ESP32 WiFi driver can be left in a state where
+// scanNetworks() "completes" instantly with zero results instead of actually
+// failing, so the retry-on-WIFI_SCAN_FAILED logic in the Scanning state never
+// kicks in and the picker looks permanently empty until reboot. A full
+// stop/restart of the radio is the reliable fix. The short delay is a
+// deliberate one-time exception to this library's non-blocking design - it
+// only runs once, right after a failed connection, not on any hot path.
+void TouchWifiProvisioner::resetRadio() {
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+  delay(100);
+  WiFi.mode(WIFI_STA);
 }
 
 void TouchWifiProvisioner::reset() {
@@ -285,6 +304,10 @@ void TouchWifiProvisioner::populateNetworkList() {
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
   styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
+
+  lv_obj_t *hidden = lv_list_add_btn(_list, LV_SYMBOL_EDIT, "Hidden network...");
+  styleListRow(hidden, /*accent=*/true);
+  lv_obj_add_event_cb(hidden, onHiddenClicked, LV_EVENT_CLICKED, nullptr);
 
   std::vector<String> seen;
   for (int i = 0; i < count; i++) {
@@ -399,6 +422,7 @@ void TouchWifiProvisioner::teardownUi() {
   _list = nullptr;
   _statusLabel = nullptr;
   _passwordTa = nullptr;
+  _ssidTa = nullptr;
   _keyboard = nullptr;
 }
 
@@ -437,6 +461,67 @@ void TouchWifiProvisioner::onConnectClicked(lv_event_t *e) {
 
 void TouchWifiProvisioner::onBackClicked(lv_event_t *e) {
   showPicker();
+}
+
+void TouchWifiProvisioner::showHiddenSsidEntry() {
+  lv_obj_clean(_screen);
+  _statusLabel = nullptr;
+  _list = nullptr;
+  _passwordTa = nullptr;
+
+  lv_obj_t *title = lv_label_create(_screen);
+  lv_label_set_text(title, LV_SYMBOL_WIFI "  Hidden network name");
+  lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
+
+  _ssidTa = lv_textarea_create(_screen);
+  lv_textarea_set_one_line(_ssidTa, true);
+  lv_textarea_set_max_length(_ssidTa, 32); // SSID length limit
+  lv_textarea_set_placeholder_text(_ssidTa, "Network name (SSID)");
+  lv_obj_set_width(_ssidTa, lv_pct(90));
+  lv_obj_set_style_bg_color(_ssidTa, COLOR_CARD, 0);
+  lv_obj_set_style_bg_opa(_ssidTa, LV_OPA_COVER, 0);
+  lv_obj_set_style_text_color(_ssidTa, COLOR_TEXT, 0);
+  lv_obj_set_style_border_color(_ssidTa, COLOR_ACCENT, 0);
+  lv_obj_set_style_border_width(_ssidTa, 1, 0);
+  lv_obj_set_style_radius(_ssidTa, 8, 0);
+
+  lv_obj_t *btnRow = lv_obj_create(_screen);
+  lv_obj_set_size(btnRow, lv_pct(90), LV_SIZE_CONTENT);
+  lv_obj_set_style_border_width(btnRow, 0, 0);
+  lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_pad_all(btnRow, 0, 0);
+  lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+  lv_obj_t *backBtn = lv_btn_create(btnRow);
+  styleActionButton(backBtn, /*primary=*/false);
+  lv_obj_add_event_cb(backBtn, onBackClicked, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t *backLabel = lv_label_create(backBtn);
+  lv_label_set_text(backLabel, LV_SYMBOL_LEFT " Back");
+
+  lv_obj_t *nextBtn = lv_btn_create(btnRow);
+  styleActionButton(nextBtn, /*primary=*/true);
+  lv_obj_add_event_cb(nextBtn, onHiddenNextClicked, LV_EVENT_CLICKED, nullptr);
+  lv_obj_t *nextLabel = lv_label_create(nextBtn);
+  lv_label_set_text(nextLabel, "Next " LV_SYMBOL_RIGHT);
+
+  _keyboard = lv_keyboard_create(_screen);
+  lv_keyboard_set_textarea(_keyboard, _ssidTa);
+  lv_obj_set_size(_keyboard, lv_pct(100), lv_pct(45));
+  lv_obj_add_event_cb(_keyboard, onHiddenNextClicked, LV_EVENT_READY, nullptr);
+  lv_obj_add_event_cb(_keyboard, onBackClicked, LV_EVENT_CANCEL, nullptr);
+}
+
+void TouchWifiProvisioner::onHiddenClicked(lv_event_t *e) {
+  showHiddenSsidEntry();
+}
+
+void TouchWifiProvisioner::onHiddenNextClicked(lv_event_t *e) {
+  String ssid = _ssidTa ? lv_textarea_get_text(_ssidTa) : "";
+  if (ssid.isEmpty()) return;
+  // A hidden network's security type is unknown (it isn't in the scan), so
+  // always go through the password screen; leaving it blank connects as open.
+  showPasswordEntry(ssid);
 }
 
 void TouchWifiProvisioner::onShowPasswordToggled(lv_event_t *e) {

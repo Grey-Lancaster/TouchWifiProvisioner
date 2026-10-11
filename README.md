@@ -114,6 +114,14 @@ established connection drops. The library then waits for the network to come
 back on its own - it never tears down your app's UI over a transient outage -
 and fires `onConnected` again once it recovers.
 
+If you'd rather it not wait forever, call `TouchWifiProvisioner::setReconnectTimeout(ms)`
+(e.g. `10 * 60 * 1000`). Once the connection has been down that long, the picker
+is shown again so the user can fix the password or pick another network. Saved
+credentials are kept until a new network connects. Default is 0 (wait forever).
+
+The picker also has a "Hidden network..." row for networks that don't broadcast
+their name: type the SSID, then the password (blank for an open network).
+
 ## Examples
 
 Each example is a full, board-specific sketch: display/touch/LVGL bring-up

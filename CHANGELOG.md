@@ -5,6 +5,20 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.4.7] - 2026-10-11
+
+### Added
+- **Hidden networks.** The picker now has a "Hidden network..." row: type
+  the SSID, then the usual password screen (leave the password blank for an
+  open network). Previously a hidden SSID could not be joined at all, since
+  it never appears in a scan.
+- `TouchWifiProvisioner::setReconnectTimeout(ms)`: opt-in give-up for the
+  reconnect wait. If an established connection stays down longer than `ms`,
+  the on-device picker is shown again with "Couldn't reconnect to <SSID>",
+  so a changed password or a moved router no longer leaves the device
+  retrying forever with only `reset()` as an escape. Saved credentials are
+  kept until a new network connects. Default 0 = wait forever (unchanged).
+
 ## [1.4.3] - 2026-07-26
 
 ### Added

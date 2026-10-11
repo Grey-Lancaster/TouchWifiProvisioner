@@ -60,6 +60,14 @@ public:
   // the network returns.
   static void setOnDisconnected(DisconnectedCallback cb);
 
+  // Optional: if an established connection stays down for longer than
+  // `ms`, give up waiting and re-show the on-device picker (over the host
+  // app's UI) so the user can choose a different network or fix the
+  // password. The saved credentials are kept until a new network connects
+  // successfully. 0 (the default) means wait forever, the original
+  // behavior.
+  static void setReconnectTimeout(unsigned long ms);
+
 private:
   enum class State {
     Idle,
@@ -76,6 +84,8 @@ private:
   static void showPicker();
   static void populateNetworkList();
   static void showPasswordEntry(const String &ssid);
+  static void showHiddenSsidEntry();
+  static void resetRadio();
   static void teardownUi();
   static void reportStatus(const String &message);
 
@@ -83,6 +93,8 @@ private:
   static void onRescanClicked(lv_event_t *e);
   static void onConnectClicked(lv_event_t *e);
   static void onBackClicked(lv_event_t *e);
+  static void onHiddenClicked(lv_event_t *e);
+  static void onHiddenNextClicked(lv_event_t *e);
   static void onShowPasswordToggled(lv_event_t *e);
 
   static lv_obj_t *_parent;
@@ -91,11 +103,14 @@ private:
   static lv_obj_t *_statusLabel;
   static lv_obj_t *_passwordTa;
   static lv_obj_t *_keyboard;
+  static lv_obj_t *_ssidTa;
 
   static String _hostname;
   static String _pendingSsid;
   static String _pendingPassword;
   static unsigned long _connectStartMs;
+  static unsigned long _outageStartMs;
+  static unsigned long _reconnectTimeoutMs;
   static State _state;
   static int _emptyScanRetries;
 
