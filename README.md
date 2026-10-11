@@ -119,6 +119,15 @@ If you'd rather it not wait forever, call `TouchWifiProvisioner::setReconnectTim
 is shown again so the user can fix the password or pick another network. Saved
 credentials are kept until a new network connects. Default is 0 (wait forever).
 
+The board remembers up to 5 networks (`setMaxSavedNetworks(n)`, 1-10), most
+recently used first. At boot, with more than one saved, it scans and joins the
+strongest one in range - so moving it between known SSIDs just works. In the
+picker, saved networks are tagged "saved": tap to connect without retyping the
+password, hold to forget. `savedNetworks()` lists them and `forget(ssid)`
+removes one; `reset()` clears all. A network saved by an older version is
+kept. Passwords are stored unencrypted in NVS (enable NVS encryption if that
+matters for your device).
+
 The picker also has a "Hidden network..." row for networks that don't broadcast
 their name: type the SSID, then the password (blank for an open network).
 

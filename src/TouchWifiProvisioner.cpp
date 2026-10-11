@@ -5,9 +5,11 @@
 #include <WiFi.h>
 #include <Preferences.h>
 #include <vector>
+#include <algorithm>
 
 namespace {
 const char *PREFS_NAMESPACE = "wifiprov";
+const uint8_t MAX_SAVED_HARD = 10;
 Preferences prefs;
 
 // Color/spacing-only theme - deliberately no custom font sizes. lv_conf.h
@@ -62,6 +64,9 @@ unsigned long TouchWifiProvisioner::_outageStartMs = 0;
 unsigned long TouchWifiProvisioner::_reconnectTimeoutMs = 0;
 TouchWifiProvisioner::State TouchWifiProvisioner::_state = TouchWifiProvisioner::State::Idle;
 int TouchWifiProvisioner::_emptyScanRetries = 0;
+std::vector<TouchWifiProvisioner::SavedNet> TouchWifiProvisioner::_candidates;
+size_t TouchWifiProvisioner::_candIdx = 0;
+uint8_t TouchWifiProvisioner::_maxSaved = 5;
 
 TouchWifiProvisioner::ConnectedCallback TouchWifiProvisioner::_onConnected = nullptr;
 TouchWifiProvisioner::StatusCallback TouchWifiProvisioner::_onStatus = nullptr;
@@ -73,6 +78,75 @@ void TouchWifiProvisioner::setOnDisconnected(DisconnectedCallback cb) {
 
 void TouchWifiProvisioner::setReconnectTimeout(unsigned long ms) {
   _reconnectTimeoutMs = ms;
+}
+
+std::vector<TouchWifiProvisioner::SavedNet> TouchWifiProvisioner::loadSaved() {
+  std::vector<SavedNet> out;
+  prefs.begin(PREFS_NAMESPACE, true);
+  if (prefs.isKey("n")) {
+    int n = prefs.getUChar("n", 0);
+    for (int i = 0; i < n && i < MAX_SAVED_HARD; i++) {
+      String s = prefs.getString(("s" + String(i)).c_str(), "");
+      if (s.isEmpty()) continue;
+      out.push_back({s, prefs.getString(("p" + String(i)).c_str(), "")});
+    }
+  } else {
+    // Pre-1.5.0 layout: a single network under "ssid"/"password". It is
+    // rewritten in the list format the next time anything is saved.
+    String s = prefs.getString("ssid", "");
+    if (!s.isEmpty()) out.push_back({s, prefs.getString("password", "")});
+  }
+  prefs.end();
+  return out;
+}
+
+void TouchWifiProvisioner::saveSaved(const std::vector<SavedNet> &list) {
+  prefs.begin(PREFS_NAMESPACE, false);
+  prefs.clear();
+  prefs.putUChar("n", (uint8_t)list.size());
+  for (size_t i = 0; i < list.size(); i++) {
+    prefs.putString(("s" + String((int)i)).c_str(), list[i].ssid);
+    prefs.putString(("p" + String((int)i)).c_str(), list[i].password);
+  }
+  prefs.end();
+}
+
+// Moves (or adds) the network to the front of the list. A no-op - no flash
+// write - when it is already first with the same password, which is the
+// common case on every normal boot.
+void TouchWifiProvisioner::rememberNetwork(const String &ssid, const String &password) {
+  std::vector<SavedNet> list = loadSaved();
+  if (!list.empty() && list[0].ssid == ssid && list[0].password == password) return;
+  list.erase(std::remove_if(list.begin(), list.end(),
+                            [&](const SavedNet &n) { return n.ssid == ssid; }),
+             list.end());
+  list.insert(list.begin(), SavedNet{ssid, password});
+  while (list.size() > _maxSaved) list.pop_back();
+  saveSaved(list);
+  Serial.printf("[TouchWifiProvisioner] Saved \"%s\" (%u saved network(s))\n", ssid.c_str(),
+                (unsigned)list.size());
+}
+
+std::vector<String> TouchWifiProvisioner::savedNetworks() {
+  std::vector<String> out;
+  for (const auto &n : loadSaved()) out.push_back(n.ssid);
+  return out;
+}
+
+void TouchWifiProvisioner::forget(const String &ssid) {
+  std::vector<SavedNet> list = loadSaved();
+  size_t before = list.size();
+  list.erase(std::remove_if(list.begin(), list.end(),
+                            [&](const SavedNet &n) { return n.ssid == ssid; }),
+             list.end());
+  if (list.size() != before) {
+    saveSaved(list);
+    Serial.printf("[TouchWifiProvisioner] Forgot \"%s\"\n", ssid.c_str());
+  }
+}
+
+void TouchWifiProvisioner::setMaxSavedNetworks(uint8_t n) {
+  _maxSaved = n < 1 ? 1 : (n > MAX_SAVED_HARD ? MAX_SAVED_HARD : n);
 }
 
 void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
@@ -99,22 +173,69 @@ void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
 }
 
 void TouchWifiProvisioner::tryStoredCredentials() {
-  prefs.begin(PREFS_NAMESPACE, true);
-  String ssid = prefs.getString("ssid", "");
-  String password = prefs.getString("password", "");
-  prefs.end();
-
-  if (ssid.isEmpty()) {
+  _candidates = loadSaved();
+  _candIdx = 0;
+  if (_candidates.empty()) {
     showPicker();
     return;
   }
+  // One saved network: connect straight away like before. Several: scan
+  // first so the strongest one in range is tried first.
+  if (_candidates.size() == 1) {
+    tryNextCandidate();
+  } else {
+    beginSavedScan();
+  }
+}
 
-  startConnect(ssid, password, false);
+void TouchWifiProvisioner::beginSavedScan() {
+  _state = State::ScanningSaved;
+  _emptyScanRetries = 0;
+  WiFi.scanNetworks(true);
+  reportStatus("Looking for saved networks...");
+  Serial.printf("[TouchWifiProvisioner] %u saved networks - scanning to pick one\n",
+                (unsigned)_candidates.size());
+}
+
+// Reorders _candidates: saved networks seen in the scan, strongest first,
+// then the ones not seen (possibly hidden) in most-recently-used order.
+void TouchWifiProvisioner::orderCandidates(int scanCount) {
+  std::vector<std::pair<SavedNet, int>> visible;
+  std::vector<SavedNet> unseen;
+  for (const auto &n : _candidates) {
+    int best = -1000;
+    bool seen = false;
+    for (int i = 0; i < scanCount; i++) {
+      if (WiFi.SSID(i) == n.ssid) {
+        seen = true;
+        best = std::max(best, (int)WiFi.RSSI(i));
+      }
+    }
+    if (seen) visible.push_back({n, best}); else unseen.push_back(n);
+  }
+  std::stable_sort(visible.begin(), visible.end(),
+                   [](const std::pair<SavedNet, int> &x, const std::pair<SavedNet, int> &y) {
+                     return x.second > y.second;
+                   });
+  _candidates.clear();
+  for (const auto &v : visible) _candidates.push_back(v.first);
+  for (const auto &u : unseen) _candidates.push_back(u);
+  _candIdx = 0;
+}
+
+void TouchWifiProvisioner::tryNextCandidate() {
+  if (_candIdx >= _candidates.size()) return;
+  SavedNet c = _candidates[_candIdx++];
+  startConnect(c.ssid, c.password, false);
 }
 
 void TouchWifiProvisioner::startConnect(const String &ssid, const String &password, bool fromPicker) {
   _pendingSsid = ssid;
   _pendingPassword = password;
+  if (fromPicker) {
+    _candidates.clear();
+    _candIdx = 0;
+  }
   _state = fromPicker ? State::ConnectingFromPicker : State::ConnectingStored;
   _connectStartMs = millis();
   reportStatus("Connecting to " + ssid + "...");
@@ -129,12 +250,9 @@ void TouchWifiProvisioner::loop() {
     case State::ConnectingFromPicker: {
       wl_status_t st = WiFi.status();
       if (st == WL_CONNECTED) {
-        if (_state == State::ConnectingFromPicker) {
-          prefs.begin(PREFS_NAMESPACE, false);
-          prefs.putString("ssid", _pendingSsid);
-          prefs.putString("password", _pendingPassword);
-          prefs.end();
-        }
+        rememberNetwork(_pendingSsid, _pendingPassword);
+        _candidates.clear();
+        _candIdx = 0;
         teardownUi();
         _state = State::Connected;
         reportStatus("Connected: " + WiFi.localIP().toString());
@@ -147,11 +265,25 @@ void TouchWifiProvisioner::loop() {
                                (st == WL_CONNECT_FAILED || st == WL_NO_SSID_AVAIL);
         if (definiteFailure || elapsed > CONNECT_TIMEOUT_MS) {
           resetRadio();
+          if (_state == State::ConnectingStored && _candIdx < _candidates.size()) {
+            Serial.printf("[TouchWifiProvisioner] \"%s\" failed - trying next saved network\n",
+                          _pendingSsid.c_str());
+            tryNextCandidate();
+            break;
+          }
           String why;
-          if (st == WL_NO_SSID_AVAIL) {
+          if (_state == State::ConnectingStored && _candidates.size() > 1) {
+            why = "Couldn't connect to any saved network";
+          } else if (st == WL_NO_SSID_AVAIL) {
             why = "Network not found: " + _pendingSsid;
           } else if (st == WL_CONNECT_FAILED) {
             why = "Couldn't connect to " + _pendingSsid + " - wrong password?";
+            for (const auto &n : loadSaved()) {
+              if (n.ssid == _pendingSsid) {
+                why += " (hold it to forget, then re-add)";
+                break;
+              }
+            }
           } else {
             why = "Couldn't connect to " + _pendingSsid;
           }
@@ -187,17 +319,47 @@ void TouchWifiProvisioner::loop() {
         if (_onConnected) _onConnected(WiFi.localIP().toString());
       } else if (_reconnectTimeoutMs > 0 &&
                  millis() - _outageStartMs > _reconnectTimeoutMs) {
-        // Opt-in give-up (setReconnectTimeout): hand control back to the
-        // user. Saved credentials stay until a new network connects.
-        String why = "Couldn't reconnect to " + _pendingSsid;
-        Serial.println("[TouchWifiProvisioner] Reconnect timed out - showing picker");
+        // Opt-in give-up (setReconnectTimeout): try every saved network
+        // (the board may have moved), then hand control back to the user.
+        // Saved credentials stay until forgotten.
+        Serial.println("[TouchWifiProvisioner] Reconnect timed out - trying saved networks");
         resetRadio();
-        showPicker();
-        reportStatus(why);
+        _candidates = loadSaved();
+        _candIdx = 0;
+        if (_candidates.empty()) {
+          showPicker();
+          reportStatus("Couldn't reconnect to " + _pendingSsid);
+        } else if (_candidates.size() == 1) {
+          tryNextCandidate();
+        } else {
+          beginSavedScan();
+        }
       } else if (millis() - _connectStartMs > CONNECT_TIMEOUT_MS) {
         Serial.println("[TouchWifiProvisioner] Still not reconnected, nudging WiFi.reconnect()...");
         WiFi.reconnect();
         _connectStartMs = millis();
+      }
+      break;
+    }
+    case State::ScanningSaved: {
+      int found = WiFi.scanComplete();
+      if (found >= 0 && found == 0 && _emptyScanRetries < MAX_EMPTY_SCAN_RETRIES) {
+        _emptyScanRetries++;
+        WiFi.scanDelete();
+        WiFi.scanNetworks(true);
+      } else if (found >= 0) {
+        orderCandidates(found);
+        WiFi.scanDelete();
+        tryNextCandidate();
+      } else if (found == WIFI_SCAN_FAILED) {
+        if (_emptyScanRetries < MAX_EMPTY_SCAN_RETRIES) {
+          _emptyScanRetries++;
+          WiFi.scanNetworks(true);
+        } else {
+          // Can't scan at all - just probe the saved networks in order.
+          orderCandidates(0);
+          tryNextCandidate();
+        }
       }
       break;
     }
@@ -309,6 +471,8 @@ void TouchWifiProvisioner::populateNetworkList() {
   styleListRow(hidden, /*accent=*/true);
   lv_obj_add_event_cb(hidden, onHiddenClicked, LV_EVENT_CLICKED, nullptr);
 
+  std::vector<SavedNet> saved = loadSaved();
+  bool anySaved = false;
   std::vector<String> seen;
   for (int i = 0; i < count; i++) {
     String ssid = WiFi.SSID(i);
@@ -322,26 +486,37 @@ void TouchWifiProvisioner::populateNetworkList() {
     seen.push_back(ssid);
 
     bool secure = WiFi.encryptionType(i) != WIFI_AUTH_OPEN;
-    Serial.printf("[TouchWifiProvisioner]   \"%s\" RSSI=%d dBm %s\n", ssid.c_str(),
-                  WiFi.RSSI(i), secure ? "" : "(open)");
+    bool isSaved = false;
+    for (const auto &n : saved) {
+      if (n.ssid == ssid) { isSaved = true; break; }
+    }
+    anySaved = anySaved || isSaved;
+    Serial.printf("[TouchWifiProvisioner]   \"%s\" RSSI=%d dBm%s%s\n", ssid.c_str(),
+                  WiFi.RSSI(i), secure ? "" : " (open)", isSaved ? " (saved)" : "");
     lv_obj_t *btn = lv_list_add_btn(_list, LV_SYMBOL_WIFI, ssid.c_str());
-    lv_obj_set_user_data(btn, (void *)(intptr_t)(secure ? 1 : 0));
+    lv_obj_set_user_data(btn, (void *)(intptr_t)((secure ? 1 : 0) | (isSaved ? 2 : 0)));
     styleListRow(btn, /*accent=*/false);
-    lv_obj_add_event_cb(btn, onListButtonClicked, LV_EVENT_CLICKED, nullptr);
-    if (!secure) {
+    // SHORT_CLICKED (not CLICKED) so a long-press to forget doesn't also
+    // count as a tap.
+    lv_obj_add_event_cb(btn, onListButtonClicked, LV_EVENT_SHORT_CLICKED, nullptr);
+    lv_obj_add_event_cb(btn, onListButtonLongPressed, LV_EVENT_LONG_PRESSED, nullptr);
+    if (!secure || isSaved) {
       // LVGL's built-in symbol font has no padlock glyph, so tag the rare
-      // open networks instead of decorating every secured one. Added as a
-      // separate label - lv_list_get_btn_text() returns the first label
-      // (the SSID), so this can't leak into the SSID we connect to.
-      lv_obj_t *openTag = lv_label_create(btn);
-      lv_label_set_text(openTag, "open");
-      lv_obj_set_style_text_color(openTag, COLOR_TEXT_MUTED, 0);
+      // open networks (and the saved ones) instead of decorating every
+      // secured one. Added as a separate label - lv_list_get_btn_text()
+      // returns the first label (the SSID), so this can't leak into the
+      // SSID we connect to.
+      lv_obj_t *tag = lv_label_create(btn);
+      lv_label_set_text(tag, !secure && isSaved ? "open, saved" : (isSaved ? "saved" : "open"));
+      lv_obj_set_style_text_color(tag, COLOR_TEXT_MUTED, 0);
     }
   }
 
   WiFi.scanDelete();
   _state = State::Picker;
-  reportStatus(seen.empty() ? "No networks found - tap Rescan" : "Tap a network to connect");
+  reportStatus(seen.empty() ? "No networks found - tap Rescan"
+               : anySaved   ? "Tap a network to connect - hold a saved one to forget it"
+                            : "Tap a network to connect");
   if (seen.empty()) Serial.println("[TouchWifiProvisioner] No networks found");
 }
 
@@ -436,13 +611,41 @@ void TouchWifiProvisioner::onListButtonClicked(lv_event_t *e) {
   const char *text = lv_list_get_btn_text(_list, btn);
   if (!text) return;
 
-  bool secure = (intptr_t)lv_obj_get_user_data(btn) != 0;
+  intptr_t flags = (intptr_t)lv_obj_get_user_data(btn);
+  bool secure = flags & 1;
+  if (flags & 2) {
+    // Saved network: reuse the stored password, no keyboard needed.
+    String ssid(text);
+    for (const auto &n : loadSaved()) {
+      if (n.ssid == ssid) {
+        startConnect(ssid, n.password, true);
+        return;
+      }
+    }
+  }
   if (secure) {
     showPasswordEntry(String(text));
   } else {
     // Open network - no password to collect, connect straight away.
     startConnect(String(text), "", true);
   }
+}
+
+void TouchWifiProvisioner::onListButtonLongPressed(lv_event_t *e) {
+  lv_obj_t *btn = static_cast<lv_obj_t *>(lv_event_get_target(e));
+  intptr_t flags = (intptr_t)lv_obj_get_user_data(btn);
+  if (!(flags & 2)) return;
+  const char *text = lv_list_get_btn_text(_list, btn);
+  if (!text) return;
+
+  String ssid(text);
+  forget(ssid);
+  lv_obj_set_user_data(btn, (void *)(intptr_t)(flags & ~2));
+  if (lv_obj_get_child_cnt(btn) > 2) {
+    lv_obj_t *tag = lv_obj_get_child(btn, 2);
+    if (flags & 1) lv_obj_del(tag); else lv_label_set_text(tag, "open");
+  }
+  reportStatus("Forgot " + ssid);
 }
 
 void TouchWifiProvisioner::onRescanClicked(lv_event_t *e) {

@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.5.0] - 2026-10-11
+
+### Added
+- **Saved networks.** The board now remembers up to 5 networks (change with
+  `setMaxSavedNetworks(n)`, 1-10), most recently used first, instead of
+  overwriting a single one. Carry it from one known SSID to another and it
+  reconnects on its own: with several saved networks, boot scans first and
+  tries the strongest one in range, then the rest (networks not seen in the
+  scan, e.g. hidden ones, are probed last). With a single saved network
+  nothing changes - it connects straight away with no scan.
+- In the picker, saved networks are tagged "saved"; tapping one connects
+  with the stored password (no keyboard), and holding one forgets it.
+- `savedNetworks()` and `forget(ssid)` for apps that want their own
+  settings screen. `reset()` still clears everything.
+- With `setReconnectTimeout()` set, a dropped connection now tries every
+  saved network before falling back to the picker, so a board moved to
+  another known SSID roams without a reboot.
+- A network from before this version is migrated automatically and
+  becomes the first saved entry.
+
+### Notes
+- Passwords are stored in plaintext in NVS, as before - now for several
+  networks. Enable NVS encryption if that matters for your device.
+
 ## [1.4.7] - 2026-10-11
 
 ### Added

@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <lvgl.h>
 #include <functional>
+#include <vector>
 
 // On-device Wi-Fi provisioning UI for LVGL touchscreens.
 //
@@ -36,9 +37,10 @@ public:
   using StatusCallback = std::function<void(const String &message)>;
   using DisconnectedCallback = std::function<void()>;
 
-  // Loads saved credentials and tries to connect; if there are none, or the
-  // saved network can't be reached within the connect timeout, builds a
-  // scan/pick/keyboard UI inside `parent`. `onConnected` fires once per
+  // Loads the saved networks and tries to connect; if there are none, or
+  // none of them can be reached, builds a scan/pick/keyboard UI inside
+  // `parent`. With several saved networks it first scans and tries the
+  // strongest one in range, then the rest. `onConnected` fires once per
   // successful connection (including reconnects after reset()).
   static void begin(lv_obj_t *parent, const char *hostname,
                      ConnectedCallback onConnected,
@@ -63,10 +65,19 @@ public:
   // Optional: if an established connection stays down for longer than
   // `ms`, give up waiting and re-show the on-device picker (over the host
   // app's UI) so the user can choose a different network or fix the
-  // password. The saved credentials are kept until a new network connects
-  // successfully. 0 (the default) means wait forever, the original
-  // behavior.
+  // password. Before showing the picker it tries every saved network (so a
+  // board carried to another known SSID roams on its own). The saved
+  // credentials are kept until you forget them. 0 (the default) means wait
+  // forever, the original behavior.
   static void setReconnectTimeout(unsigned long ms);
+
+  // Networks the board remembers, most recently used first. Every
+  // successful connect from the picker saves (or updates) its network.
+  // Default capacity is 5 (clamped to 1..10); the oldest is dropped when
+  // full. Upgrading from a single-network version keeps that network.
+  static std::vector<String> savedNetworks();
+  static void forget(const String &ssid);
+  static void setMaxSavedNetworks(uint8_t n);
 
 private:
   enum class State {
@@ -77,7 +88,21 @@ private:
     WaitingReconnect,
     Scanning,
     Picker,
+    ScanningSaved,
   };
+
+  struct SavedNet {
+    String ssid;
+    String password;
+  };
+
+  static std::vector<SavedNet> loadSaved();
+  static void saveSaved(const std::vector<SavedNet> &list);
+  static void rememberNetwork(const String &ssid, const String &password);
+  static void beginSavedScan();
+  static void orderCandidates(int scanCount);
+  static void tryNextCandidate();
+  static void onListButtonLongPressed(lv_event_t *e);
 
   static void tryStoredCredentials();
   static void startConnect(const String &ssid, const String &password, bool fromPicker);
@@ -113,6 +138,9 @@ private:
   static unsigned long _reconnectTimeoutMs;
   static State _state;
   static int _emptyScanRetries;
+  static std::vector<SavedNet> _candidates;
+  static size_t _candIdx;
+  static uint8_t _maxSaved;
 
   static ConnectedCallback _onConnected;
   static StatusCallback _onStatus;
