@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly: the CrowPanel7 examples download a release asset and upstream
+  # packages at build time, which can break with no commit here.
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   build-cyd-rollingclock:
@@ -259,3 +264,29 @@ jobs:
       - name: Build CrowPanel7_RollingClock
         working-directory: /tmp/build
         run: pio run -e crowpanel7
+
+  # Builds each CrowPanel7 example exactly as a user would after cloning:
+  # its own platformio.ini, with elecrow-libs-1/ESP32S3_120M.zip fetched
+  # from the release URL. The jobs above build from a git clone of Elecrow's
+  # folder instead, so they never exercise that zip - a mis-packaged asset
+  # (e.g. Windows backslash paths, which unpack as flat files on Linux)
+  # would otherwise go unnoticed.
+  build-crowpanel7-release-asset:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: [CrowPanel7_BasicConnect, CrowPanel7_RollingClock]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build ${{ matrix.example }} from its own platformio.ini
+        working-directory: examples/${{ matrix.example }}
+        run: pio run
