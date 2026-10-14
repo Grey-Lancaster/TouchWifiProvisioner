@@ -37,6 +37,8 @@ public:
   using StatusCallback = std::function<void(const String &message)>;
   using DisconnectedCallback = std::function<void()>;
 
+  enum class Language : uint8_t { English = 0, Spanish = 1 };
+
   // Loads the saved networks and tries to connect; if there are none, or
   // none of them can be reached, builds a scan/pick/keyboard UI inside
   // `parent`. With several saved networks it first scans and tries the
@@ -75,6 +77,17 @@ public:
   // successful connect from the picker saves (or updates) its network.
   // Default capacity is 5 (clamped to 1..10); the oldest is dropped when
   // full. Upgrading from a single-network version keeps that network.
+  // UI language for the library's own screens and status messages (the
+  // `onStatus` callback gets them too; Serial logging stays English). On a
+  // fresh board - nothing saved and no language chosen yet - the first
+  // screen asks "English / Espanol" and remembers the answer, so this is
+  // only needed to preset a language or to build your own settings screen.
+  // Takes effect on the next screen that is built. Persisted separately
+  // from the networks, so reset() keeps it. Spanish accents are drawn with
+  // a small bundled Latin-1 font (define TWP_NO_LATIN1_FONT to drop it).
+  static void setLanguage(Language lang);
+  static Language language();
+
   static std::vector<String> savedNetworks();
   static void forget(const String &ssid);
   static void setMaxSavedNetworks(uint8_t n);
@@ -110,6 +123,9 @@ private:
   static void populateNetworkList();
   static void showPasswordEntry(const String &ssid);
   static void showHiddenSsidEntry();
+  static void showLanguageSelect();
+  static void applyFont(lv_obj_t *screen);
+  static void loadLanguage();
   static void resetRadio();
   static void teardownUi();
   static void reportStatus(const String &message);
@@ -119,6 +135,8 @@ private:
   static void onConnectClicked(lv_event_t *e);
   static void onBackClicked(lv_event_t *e);
   static void onHiddenClicked(lv_event_t *e);
+  static void onLanguageChosen(lv_event_t *e);
+  static void onLanguageToggleClicked(lv_event_t *e);
   static void onHiddenNextClicked(lv_event_t *e);
   static void onShowPasswordToggled(lv_event_t *e);
 
@@ -141,6 +159,8 @@ private:
   static std::vector<SavedNet> _candidates;
   static size_t _candIdx;
   static uint8_t _maxSaved;
+  static Language _lang;
+  static bool _langChosen;
 
   static ConnectedCallback _onConnected;
   static StatusCallback _onStatus;

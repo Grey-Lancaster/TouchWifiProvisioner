@@ -7,9 +7,14 @@
 #include <vector>
 #include <algorithm>
 
+extern "C" {
+LV_FONT_DECLARE(twp_font_latin1_14);
+}
+
 namespace {
 const char *PREFS_NAMESPACE = "wifiprov";
 const uint8_t MAX_SAVED_HARD = 10;
+const char *UI_NAMESPACE = "wifiprov_ui"; // separate so reset() keeps the language
 Preferences prefs;
 
 // Color/spacing-only theme - deliberately no custom font sizes. lv_conf.h
@@ -23,6 +28,64 @@ const lv_color_t COLOR_ACCENT = lv_palette_main(LV_PALETTE_BLUE);
 const lv_color_t COLOR_ACCENT_PRESSED = lv_palette_darken(LV_PALETTE_BLUE, 2);
 const lv_color_t COLOR_TEXT = lv_color_white();
 const lv_color_t COLOR_TEXT_MUTED = lv_color_hex(0x9aa0ab);
+
+enum Str : uint8_t {
+  S_SELECT_NETWORK, S_SCANNING, S_SCANNING_NETWORKS, S_RESCAN, S_HIDDEN_NETWORK,
+  S_TAP_CONNECT, S_TAP_CONNECT_HOLD, S_NO_NETWORKS, S_PASSWORD, S_PASSWORD_FOR,
+  S_SHOW_PASSWORD, S_BACK, S_CONNECT, S_NEXT, S_HIDDEN_TITLE, S_SSID_PLACEHOLDER,
+  S_TAG_OPEN, S_TAG_SAVED, S_TAG_OPEN_SAVED, S_CONNECTING_TO, S_CONNECTED,
+  S_RECONNECTED, S_LOST, S_LOOKING_SAVED, S_SCAN_FAILED, S_NOT_FOUND,
+  S_NO_SAVED_WORKED, S_COULDNT_CONNECT, S_WRONG_PASSWORD, S_HOLD_FORGET_HINT,
+  S_COULDNT_RECONNECT, S_FORGOT, S_LANGUAGE_TITLE, S_OTHER_LANGUAGE,
+  S_STR_COUNT
+};
+
+// [English, Spanish]. Messages that end in a network name are prefixes.
+const char *const STRINGS[S_STR_COUNT][2] = {
+  /* S_SELECT_NETWORK   */ {"Select a Wi-Fi Network", "Elige una red Wi-Fi"},
+  /* S_SCANNING         */ {"Scanning...", "Buscando..."},
+  /* S_SCANNING_NETWORKS*/ {"Scanning for networks...", "Buscando redes..."},
+  /* S_RESCAN           */ {"Rescan", "Buscar de nuevo"},
+  /* S_HIDDEN_NETWORK   */ {"Hidden network...", "Red oculta..."},
+  /* S_TAP_CONNECT      */ {"Tap a network to connect", "Toca una red para conectar"},
+  /* S_TAP_CONNECT_HOLD */ {"Tap a network to connect - hold a saved one to forget it",
+                            "Toca una red para conectar - mantén pulsada una guardada para olvidarla"},
+  /* S_NO_NETWORKS      */ {"No networks found - tap Rescan",
+                            "No se encontraron redes - toca Buscar de nuevo"},
+  /* S_PASSWORD         */ {"Password", "Contraseña"},
+  /* S_PASSWORD_FOR     */ {"Password for ", "Contraseña de "},
+  /* S_SHOW_PASSWORD    */ {"Show password", "Mostrar contraseña"},
+  /* S_BACK             */ {"Back", "Atrás"},
+  /* S_CONNECT          */ {"Connect", "Conectar"},
+  /* S_NEXT             */ {"Next", "Siguiente"},
+  /* S_HIDDEN_TITLE     */ {"Hidden network name", "Nombre de la red oculta"},
+  /* S_SSID_PLACEHOLDER */ {"Network name (SSID)", "Nombre de red (SSID)"},
+  /* S_TAG_OPEN         */ {"open", "abierta"},
+  /* S_TAG_SAVED        */ {"saved", "guardada"},
+  /* S_TAG_OPEN_SAVED   */ {"open, saved", "abierta, guardada"},
+  /* S_CONNECTING_TO    */ {"Connecting to ", "Conectando a "},
+  /* S_CONNECTED        */ {"Connected: ", "Conectado: "},
+  /* S_RECONNECTED      */ {"Reconnected: ", "Reconectado: "},
+  /* S_LOST             */ {"Wi-Fi connection lost - reconnecting...",
+                            "Conexión Wi-Fi perdida - reconectando..."},
+  /* S_LOOKING_SAVED    */ {"Looking for saved networks...", "Buscando redes guardadas..."},
+  /* S_SCAN_FAILED      */ {"Scan failed, retrying...", "Falló la búsqueda, reintentando..."},
+  /* S_NOT_FOUND        */ {"Network not found: ", "Red no encontrada: "},
+  /* S_NO_SAVED_WORKED  */ {"Couldn't connect to any saved network",
+                            "No se pudo conectar a ninguna red guardada"},
+  /* S_COULDNT_CONNECT  */ {"Couldn't connect to ", "No se pudo conectar a "},
+  /* S_WRONG_PASSWORD   */ {" - wrong password?", " - ¿contraseña incorrecta?"},
+  /* S_HOLD_FORGET_HINT */ {" (hold it to forget, then re-add)",
+                            " (mantén pulsada para olvidarla y vuelve a añadirla)"},
+  /* S_COULDNT_RECONNECT*/ {"Couldn't reconnect to ", "No se pudo reconectar a "},
+  /* S_FORGOT           */ {"Forgot ", "Olvidada: "},
+  /* S_LANGUAGE_TITLE   */ {"Language / Idioma", "Language / Idioma"},
+  /* S_OTHER_LANGUAGE   */ {"Español", "English"}, // names the language a tap switches TO
+};
+
+const char *tr(Str s, TouchWifiProvisioner::Language lang) {
+  return STRINGS[s][lang == TouchWifiProvisioner::Language::Spanish ? 1 : 0];
+}
 
 void styleScreen(lv_obj_t *screen) {
   lv_obj_set_style_bg_color(screen, COLOR_BG, 0);
@@ -67,6 +130,8 @@ int TouchWifiProvisioner::_emptyScanRetries = 0;
 std::vector<TouchWifiProvisioner::SavedNet> TouchWifiProvisioner::_candidates;
 size_t TouchWifiProvisioner::_candIdx = 0;
 uint8_t TouchWifiProvisioner::_maxSaved = 5;
+TouchWifiProvisioner::Language TouchWifiProvisioner::_lang = TouchWifiProvisioner::Language::English;
+bool TouchWifiProvisioner::_langChosen = false;
 
 TouchWifiProvisioner::ConnectedCallback TouchWifiProvisioner::_onConnected = nullptr;
 TouchWifiProvisioner::StatusCallback TouchWifiProvisioner::_onStatus = nullptr;
@@ -74,6 +139,41 @@ TouchWifiProvisioner::DisconnectedCallback TouchWifiProvisioner::_onDisconnected
 
 void TouchWifiProvisioner::setOnDisconnected(DisconnectedCallback cb) {
   _onDisconnected = cb;
+}
+
+#define TR(s) tr(s, _lang)
+
+void TouchWifiProvisioner::loadLanguage() {
+  prefs.begin(UI_NAMESPACE, true);
+  if (prefs.isKey("lang")) {
+    _lang = prefs.getUChar("lang", 0) == 1 ? Language::Spanish : Language::English;
+    _langChosen = true;
+  }
+  prefs.end();
+}
+
+void TouchWifiProvisioner::setLanguage(Language lang) {
+  _lang = lang;
+  _langChosen = true;
+  prefs.begin(UI_NAMESPACE, false);
+  prefs.putUChar("lang", lang == Language::Spanish ? 1 : 0);
+  prefs.end();
+}
+
+TouchWifiProvisioner::Language TouchWifiProvisioner::language() {
+  return _lang;
+}
+
+// Gives a screen the bundled Latin-1 font (accents, n-tilde, inverted
+// punctuation) with the host's own font as fallback for everything else, so
+// ASCII text still looks like the host app. Children inherit it.
+void TouchWifiProvisioner::applyFont(lv_obj_t *screen) {
+#ifndef TWP_NO_LATIN1_FONT
+  static lv_font_t font;
+  font = twp_font_latin1_14;
+  font.fallback = lv_obj_get_style_text_font(screen, LV_PART_MAIN);
+  lv_obj_set_style_text_font(screen, &font, 0);
+#endif
 }
 
 void TouchWifiProvisioner::setReconnectTimeout(unsigned long ms) {
@@ -155,6 +255,7 @@ void TouchWifiProvisioner::begin(lv_obj_t *parent, const char *hostname,
   _hostname = hostname;
   _onConnected = onConnected;
   _onStatus = onStatus;
+  loadLanguage();
 
   // A bare WiFi.mode(WIFI_STA) right at boot can leave the radio in a
   // state where the very first scanNetworks() completes with zero
@@ -176,7 +277,9 @@ void TouchWifiProvisioner::tryStoredCredentials() {
   _candidates = loadSaved();
   _candIdx = 0;
   if (_candidates.empty()) {
-    showPicker();
+    // Fresh board: ask for a language first. Boards that already have
+    // networks (e.g. upgraded) just default to English - no surprise screen.
+    if (_langChosen) showPicker(); else showLanguageSelect();
     return;
   }
   // One saved network: connect straight away like before. Several: scan
@@ -192,7 +295,7 @@ void TouchWifiProvisioner::beginSavedScan() {
   _state = State::ScanningSaved;
   _emptyScanRetries = 0;
   WiFi.scanNetworks(true);
-  reportStatus("Looking for saved networks...");
+  reportStatus(TR(S_LOOKING_SAVED));
   Serial.printf("[TouchWifiProvisioner] %u saved networks - scanning to pick one\n",
                 (unsigned)_candidates.size());
 }
@@ -238,7 +341,7 @@ void TouchWifiProvisioner::startConnect(const String &ssid, const String &passwo
   }
   _state = fromPicker ? State::ConnectingFromPicker : State::ConnectingStored;
   _connectStartMs = millis();
-  reportStatus("Connecting to " + ssid + "...");
+  reportStatus(String(TR(S_CONNECTING_TO)) + ssid + "...");
   Serial.printf("[TouchWifiProvisioner] Connecting to \"%s\"%s\n", ssid.c_str(),
                 fromPicker ? " (from picker)" : " (stored credentials)");
   WiFi.begin(ssid.c_str(), password.c_str());
@@ -255,7 +358,7 @@ void TouchWifiProvisioner::loop() {
         _candIdx = 0;
         teardownUi();
         _state = State::Connected;
-        reportStatus("Connected: " + WiFi.localIP().toString());
+        reportStatus(String(TR(S_CONNECTED)) + WiFi.localIP().toString());
         Serial.printf("[TouchWifiProvisioner] Connected: SSID=\"%s\" IP=%s RSSI=%d dBm\n",
                       WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
         if (_onConnected) _onConnected(WiFi.localIP().toString());
@@ -271,27 +374,35 @@ void TouchWifiProvisioner::loop() {
             tryNextCandidate();
             break;
           }
-          String why;
-          if (_state == State::ConnectingStored && _candidates.size() > 1) {
-            why = "Couldn't connect to any saved network";
-          } else if (st == WL_NO_SSID_AVAIL) {
-            why = "Network not found: " + _pendingSsid;
-          } else if (st == WL_CONNECT_FAILED) {
-            why = "Couldn't connect to " + _pendingSsid + " - wrong password?";
+          bool savedPw = false;
+          if (st == WL_CONNECT_FAILED) {
             for (const auto &n : loadSaved()) {
-              if (n.ssid == _pendingSsid) {
-                why += " (hold it to forget, then re-add)";
-                break;
-              }
+              if (n.ssid == _pendingSsid) { savedPw = true; break; }
             }
-          } else {
-            why = "Couldn't connect to " + _pendingSsid;
           }
+          bool anyMode = _state == State::ConnectingStored && _candidates.size() > 1;
+          // Built per language so Serial stays English while the screen and
+          // the onStatus callback follow the UI language.
+          auto makeWhy = [&](Language lg) {
+            String w;
+            if (anyMode) {
+              w = tr(S_NO_SAVED_WORKED, lg);
+            } else if (st == WL_NO_SSID_AVAIL) {
+              w = String(tr(S_NOT_FOUND, lg)) + _pendingSsid;
+            } else if (st == WL_CONNECT_FAILED) {
+              w = String(tr(S_COULDNT_CONNECT, lg)) + _pendingSsid + tr(S_WRONG_PASSWORD, lg);
+              if (savedPw) w += tr(S_HOLD_FORGET_HINT, lg);
+            } else {
+              w = String(tr(S_COULDNT_CONNECT, lg)) + _pendingSsid;
+            }
+            return w;
+          };
+          String why = makeWhy(_lang);
           showPicker();
           // After showPicker so it lands on the fresh status label (and
           // stays up during the scan) instead of being overwritten by it.
           reportStatus(why);
-          Serial.println("[TouchWifiProvisioner] " + why);
+          Serial.println("[TouchWifiProvisioner] " + makeWhy(Language::English));
         }
       }
       break;
@@ -301,7 +412,7 @@ void TouchWifiProvisioner::loop() {
         _state = State::WaitingReconnect;
         _connectStartMs = millis();
         _outageStartMs = _connectStartMs;
-        reportStatus("Wi-Fi connection lost - reconnecting...");
+        reportStatus(TR(S_LOST));
         Serial.println("[TouchWifiProvisioner] Wi-Fi connection lost - reconnecting...");
         if (_onDisconnected) _onDisconnected();
       }
@@ -313,7 +424,7 @@ void TouchWifiProvisioner::loop() {
       // if it seems to have given up.
       if (WiFi.status() == WL_CONNECTED) {
         _state = State::Connected;
-        reportStatus("Reconnected: " + WiFi.localIP().toString());
+        reportStatus(String(TR(S_RECONNECTED)) + WiFi.localIP().toString());
         Serial.printf("[TouchWifiProvisioner] Reconnected: SSID=\"%s\" IP=%s RSSI=%d dBm\n",
                       WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
         if (_onConnected) _onConnected(WiFi.localIP().toString());
@@ -328,7 +439,7 @@ void TouchWifiProvisioner::loop() {
         _candIdx = 0;
         if (_candidates.empty()) {
           showPicker();
-          reportStatus("Couldn't reconnect to " + _pendingSsid);
+          reportStatus(String(TR(S_COULDNT_RECONNECT)) + _pendingSsid);
         } else if (_candidates.size() == 1) {
           tryNextCandidate();
         } else {
@@ -368,7 +479,7 @@ void TouchWifiProvisioner::loop() {
       if (found >= 0) {
         populateNetworkList();
       } else if (found == WIFI_SCAN_FAILED) {
-        reportStatus("Scan failed, retrying...");
+        reportStatus(TR(S_SCAN_FAILED));
         WiFi.scanNetworks(true);
       }
       break;
@@ -417,13 +528,14 @@ void TouchWifiProvisioner::showPicker() {
   lv_obj_set_flex_align(_screen, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_all(_screen, 12, 0);
   styleScreen(_screen);
+  applyFont(_screen);
 
   lv_obj_t *title = lv_label_create(_screen);
-  lv_label_set_text(title, LV_SYMBOL_WIFI "  Select a Wi-Fi Network");
+  lv_label_set_text(title, (String(LV_SYMBOL_WIFI "  ") + TR(S_SELECT_NETWORK)).c_str());
   lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
 
   _statusLabel = lv_label_create(_screen);
-  lv_label_set_text(_statusLabel, "Scanning...");
+  lv_label_set_text(_statusLabel, TR(S_SCANNING));
   lv_obj_set_style_text_color(_statusLabel, COLOR_TEXT_MUTED, 0);
 
   _list = lv_list_create(_screen);
@@ -435,12 +547,12 @@ void TouchWifiProvisioner::showPicker() {
   lv_obj_set_style_radius(_list, 14, 0);
   lv_obj_set_style_pad_all(_list, 4, 0);
 
-  lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
+  lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, TR(S_RESCAN));
   styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
 
   WiFi.scanNetworks(true);
-  reportStatus("Scanning for networks...");
+  reportStatus(TR(S_SCANNING_NETWORKS));
   Serial.println("[TouchWifiProvisioner] Scanning for networks...");
 }
 
@@ -463,13 +575,17 @@ void TouchWifiProvisioner::populateNetworkList() {
   Serial.printf("[TouchWifiProvisioner] Scan complete: %d network(s) found\n", count);
   lv_obj_clean(_list);
 
-  lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, "Rescan");
+  lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, TR(S_RESCAN));
   styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
 
-  lv_obj_t *hidden = lv_list_add_btn(_list, LV_SYMBOL_EDIT, "Hidden network...");
+  lv_obj_t *hidden = lv_list_add_btn(_list, LV_SYMBOL_EDIT, TR(S_HIDDEN_NETWORK));
   styleListRow(hidden, /*accent=*/true);
   lv_obj_add_event_cb(hidden, onHiddenClicked, LV_EVENT_CLICKED, nullptr);
+
+  lv_obj_t *langRow = lv_list_add_btn(_list, LV_SYMBOL_SETTINGS, TR(S_OTHER_LANGUAGE));
+  styleListRow(langRow, /*accent=*/true);
+  lv_obj_add_event_cb(langRow, onLanguageToggleClicked, LV_EVENT_CLICKED, nullptr);
 
   std::vector<SavedNet> saved = loadSaved();
   bool anySaved = false;
@@ -507,16 +623,16 @@ void TouchWifiProvisioner::populateNetworkList() {
       // returns the first label (the SSID), so this can't leak into the
       // SSID we connect to.
       lv_obj_t *tag = lv_label_create(btn);
-      lv_label_set_text(tag, !secure && isSaved ? "open, saved" : (isSaved ? "saved" : "open"));
+      lv_label_set_text(tag, TR(!secure && isSaved ? S_TAG_OPEN_SAVED : (isSaved ? S_TAG_SAVED : S_TAG_OPEN)));
       lv_obj_set_style_text_color(tag, COLOR_TEXT_MUTED, 0);
     }
   }
 
   WiFi.scanDelete();
   _state = State::Picker;
-  reportStatus(seen.empty() ? "No networks found - tap Rescan"
-               : anySaved   ? "Tap a network to connect - hold a saved one to forget it"
-                            : "Tap a network to connect");
+  reportStatus(TR(seen.empty() ? S_NO_NETWORKS
+                  : anySaved   ? S_TAP_CONNECT_HOLD
+                               : S_TAP_CONNECT));
   if (seen.empty()) Serial.println("[TouchWifiProvisioner] No networks found");
 }
 
@@ -530,14 +646,14 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   _list = nullptr;
 
   lv_obj_t *title = lv_label_create(_screen);
-  lv_label_set_text_fmt(title, LV_SYMBOL_WIFI "  Password for %s", ssid.c_str());
+  lv_label_set_text_fmt(title, LV_SYMBOL_WIFI "  %s%s", TR(S_PASSWORD_FOR), ssid.c_str());
   lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
 
   _passwordTa = lv_textarea_create(_screen);
   lv_textarea_set_password_mode(_passwordTa, true);
   lv_textarea_set_one_line(_passwordTa, true);
   lv_textarea_set_max_length(_passwordTa, 63); // WPA2 passphrase limit
-  lv_textarea_set_placeholder_text(_passwordTa, "Password");
+  lv_textarea_set_placeholder_text(_passwordTa, TR(S_PASSWORD));
   lv_obj_set_width(_passwordTa, lv_pct(90));
   lv_obj_set_style_bg_color(_passwordTa, COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(_passwordTa, LV_OPA_COVER, 0);
@@ -547,7 +663,7 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   lv_obj_set_style_radius(_passwordTa, 8, 0);
 
   lv_obj_t *showPasswordCb = lv_checkbox_create(_screen);
-  lv_checkbox_set_text(showPasswordCb, "Show password");
+  lv_checkbox_set_text(showPasswordCb, TR(S_SHOW_PASSWORD));
   lv_obj_set_style_text_color(showPasswordCb, COLOR_TEXT_MUTED, 0);
   lv_obj_set_style_bg_color(showPasswordCb, COLOR_ACCENT, LV_PART_INDICATOR | LV_STATE_CHECKED);
   lv_obj_add_event_cb(showPasswordCb, onShowPasswordToggled, LV_EVENT_VALUE_CHANGED, nullptr);
@@ -572,13 +688,13 @@ void TouchWifiProvisioner::showPasswordEntry(const String &ssid) {
   styleActionButton(backBtn, /*primary=*/false);
   lv_obj_add_event_cb(backBtn, onBackClicked, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, LV_SYMBOL_LEFT " Back");
+  lv_label_set_text(backLabel, (String(LV_SYMBOL_LEFT " ") + TR(S_BACK)).c_str());
 
   lv_obj_t *connectBtn = lv_btn_create(btnRow);
   styleActionButton(connectBtn, /*primary=*/true);
   lv_obj_add_event_cb(connectBtn, onConnectClicked, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *connectLabel = lv_label_create(connectBtn);
-  lv_label_set_text(connectLabel, "Connect " LV_SYMBOL_OK);
+  lv_label_set_text(connectLabel, (String(TR(S_CONNECT)) + " " LV_SYMBOL_OK).c_str());
 
   _keyboard = lv_keyboard_create(_screen);
   lv_keyboard_set_textarea(_keyboard, _passwordTa);
@@ -643,9 +759,9 @@ void TouchWifiProvisioner::onListButtonLongPressed(lv_event_t *e) {
   lv_obj_set_user_data(btn, (void *)(intptr_t)(flags & ~2));
   if (lv_obj_get_child_cnt(btn) > 2) {
     lv_obj_t *tag = lv_obj_get_child(btn, 2);
-    if (flags & 1) lv_obj_del(tag); else lv_label_set_text(tag, "open");
+    if (flags & 1) lv_obj_del(tag); else lv_label_set_text(tag, TR(S_TAG_OPEN));
   }
-  reportStatus("Forgot " + ssid);
+  reportStatus(String(TR(S_FORGOT)) + ssid);
 }
 
 void TouchWifiProvisioner::onRescanClicked(lv_event_t *e) {
@@ -653,7 +769,7 @@ void TouchWifiProvisioner::onRescanClicked(lv_event_t *e) {
   _emptyScanRetries = 0;
   WiFi.scanNetworks(true);
   _state = State::Scanning;
-  reportStatus("Scanning for networks...");
+  reportStatus(TR(S_SCANNING_NETWORKS));
   Serial.println("[TouchWifiProvisioner] Rescan requested");
 }
 
@@ -666,6 +782,53 @@ void TouchWifiProvisioner::onBackClicked(lv_event_t *e) {
   showPicker();
 }
 
+void TouchWifiProvisioner::showLanguageSelect() {
+  teardownUi();
+  _state = State::Idle;
+
+  _screen = lv_obj_create(_parent);
+  lv_obj_set_size(_screen, lv_pct(100), lv_pct(100));
+  lv_obj_center(_screen);
+  lv_obj_set_flex_flow(_screen, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(_screen, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_all(_screen, 12, 0);
+  styleScreen(_screen);
+  applyFont(_screen);
+
+  lv_obj_t *title = lv_label_create(_screen);
+  lv_label_set_text(title, LV_SYMBOL_SETTINGS "  Language / Idioma");
+  lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
+
+  const char *names[2] = {"English", "Español"};
+  for (int i = 0; i < 2; i++) {
+    lv_obj_t *btn = lv_btn_create(_screen);
+    styleActionButton(btn, /*primary=*/true);
+    lv_obj_set_size(btn, lv_pct(70), LV_SIZE_CONTENT);
+    lv_obj_set_style_pad_ver(btn, 14, 0);
+    lv_obj_set_user_data(btn, (void *)(intptr_t)i);
+    lv_obj_add_event_cb(btn, onLanguageChosen, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t *label = lv_label_create(btn);
+    lv_label_set_text(label, names[i]);
+    lv_obj_center(label);
+  }
+  Serial.println("[TouchWifiProvisioner] Asking for language (English / Espanol)");
+}
+
+void TouchWifiProvisioner::onLanguageChosen(lv_event_t *e) {
+  lv_obj_t *btn = static_cast<lv_obj_t *>(lv_event_get_target(e));
+  setLanguage((intptr_t)lv_obj_get_user_data(btn) == 1 ? Language::Spanish : Language::English);
+  Serial.printf("[TouchWifiProvisioner] Language: %s\n",
+                _lang == Language::Spanish ? "Spanish" : "English");
+  showPicker();
+}
+
+void TouchWifiProvisioner::onLanguageToggleClicked(lv_event_t *e) {
+  setLanguage(_lang == Language::Spanish ? Language::English : Language::Spanish);
+  Serial.printf("[TouchWifiProvisioner] Language: %s\n",
+                _lang == Language::Spanish ? "Spanish" : "English");
+  showPicker();
+}
+
 void TouchWifiProvisioner::showHiddenSsidEntry() {
   lv_obj_clean(_screen);
   _statusLabel = nullptr;
@@ -673,13 +836,13 @@ void TouchWifiProvisioner::showHiddenSsidEntry() {
   _passwordTa = nullptr;
 
   lv_obj_t *title = lv_label_create(_screen);
-  lv_label_set_text(title, LV_SYMBOL_WIFI "  Hidden network name");
+  lv_label_set_text(title, (String(LV_SYMBOL_WIFI "  ") + TR(S_HIDDEN_TITLE)).c_str());
   lv_obj_set_style_text_color(title, COLOR_TEXT, 0);
 
   _ssidTa = lv_textarea_create(_screen);
   lv_textarea_set_one_line(_ssidTa, true);
   lv_textarea_set_max_length(_ssidTa, 32); // SSID length limit
-  lv_textarea_set_placeholder_text(_ssidTa, "Network name (SSID)");
+  lv_textarea_set_placeholder_text(_ssidTa, TR(S_SSID_PLACEHOLDER));
   lv_obj_set_width(_ssidTa, lv_pct(90));
   lv_obj_set_style_bg_color(_ssidTa, COLOR_CARD, 0);
   lv_obj_set_style_bg_opa(_ssidTa, LV_OPA_COVER, 0);
@@ -700,13 +863,13 @@ void TouchWifiProvisioner::showHiddenSsidEntry() {
   styleActionButton(backBtn, /*primary=*/false);
   lv_obj_add_event_cb(backBtn, onBackClicked, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *backLabel = lv_label_create(backBtn);
-  lv_label_set_text(backLabel, LV_SYMBOL_LEFT " Back");
+  lv_label_set_text(backLabel, (String(LV_SYMBOL_LEFT " ") + TR(S_BACK)).c_str());
 
   lv_obj_t *nextBtn = lv_btn_create(btnRow);
   styleActionButton(nextBtn, /*primary=*/true);
   lv_obj_add_event_cb(nextBtn, onHiddenNextClicked, LV_EVENT_CLICKED, nullptr);
   lv_obj_t *nextLabel = lv_label_create(nextBtn);
-  lv_label_set_text(nextLabel, "Next " LV_SYMBOL_RIGHT);
+  lv_label_set_text(nextLabel, (String(TR(S_NEXT)) + " " LV_SYMBOL_RIGHT).c_str());
 
   _keyboard = lv_keyboard_create(_screen);
   lv_keyboard_set_textarea(_keyboard, _ssidTa);

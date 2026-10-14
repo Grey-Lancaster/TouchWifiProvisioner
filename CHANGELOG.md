@@ -5,6 +5,30 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.6.0] - 2026-10-14
+
+### Added
+- **Spanish.** The library's own screens and status messages now come in
+  English or Spanish. On a fresh board (no saved networks, no language
+  chosen yet) the first screen is "Language / Idioma" with English and
+  Español buttons; the choice is remembered. The picker has a language row
+  to switch later, and `setLanguage(TouchWifiProvisioner::Language::Spanish)`
+  / `language()` are there for apps with their own settings screen. The
+  language is stored apart from the networks, so `reset()` keeps it. Boards
+  upgrading with networks already saved stay in English with no new prompt.
+  The `onStatus` callback receives the localized text; Serial logging stays
+  English. Your own app's text is not translated.
+- A small bundled Latin-1 font (Montserrat 14, accented letters, n-tilde,
+  inverted ! and ?) is applied to the library's screens, with the host's
+  default font as fallback, so Spanish renders correctly with the default
+  LVGL setup. It also fixes Wi-Fi names containing such characters, which
+  showed as empty boxes. About 10 KB of flash; define `TWP_NO_LATIN1_FONT`
+  to leave it out.
+
+### Changed
+- The web flasher firmware (all four examples) is rebuilt from 1.6.0. It was
+  still the v0.8.1 build.
+
 ## [1.5.0] - 2026-10-11
 
 ### Added

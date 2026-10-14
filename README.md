@@ -128,6 +128,14 @@ removes one; `reset()` clears all. A network saved by an older version is
 kept. Passwords are stored unencrypted in NVS (enable NVS encryption if that
 matters for your device).
 
+The library's screens speak English or Spanish. A fresh board first asks
+"English / Español" and remembers the answer; the picker has a language row to
+change it, and `setLanguage(TouchWifiProvisioner::Language::Spanish)` presets it
+from code. Accented characters use a small bundled font (about 10 KB; define
+`TWP_NO_LATIN1_FONT` to drop it, then supply your own font that has them).
+Only the library's text is translated, not your app's, and Serial logs stay
+English.
+
 The picker also has a "Hidden network..." row for networks that don't broadcast
 their name: type the SSID, then the password (blank for an open network).
 
