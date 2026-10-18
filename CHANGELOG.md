@@ -5,6 +5,16 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.6.4] - 2026-10-17
+
+### Added
+- **`openPicker(onCancel)`**: shows the network picker over the host app's UI
+  without forgetting the saved networks (unlike `reset()`), for a "Wi-Fi" button
+  in the app. It never times out and has a **Cancel** row at the top (English /
+  Spanish); Cancel keeps the current connection (or keeps trying the saved
+  networks) and calls `onCancel`. Joining a network from it saves it, closes the
+  picker and fires `onConnected` again.
+
 ## [1.6.0] - 2026-10-14
 
 ### Added

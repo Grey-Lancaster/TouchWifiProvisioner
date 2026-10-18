@@ -36,6 +36,7 @@ public:
   using ConnectedCallback = std::function<void(const String &ip)>;
   using StatusCallback = std::function<void(const String &message)>;
   using DisconnectedCallback = std::function<void()>;
+  using CancelCallback = std::function<void()>;
 
   enum class Language : uint8_t { English = 0, Spanish = 1 };
 
@@ -54,6 +55,15 @@ public:
 
   // Forgets the saved network and re-shows the picker UI.
   static void reset();
+
+  // Shows the picker over the host app's UI WITHOUT forgetting the saved
+  // networks, e.g. from a "Wi-Fi" button in the app. It never times out and
+  // has a Cancel row at the top; Cancel closes the picker, keeps the current
+  // connection (or keeps trying the saved networks) and calls `onCancel`.
+  // Picking and joining a network saves it, closes the picker and fires the
+  // normal onConnected callback again. Call it from the same loop that calls
+  // loop(); the host app should keep calling lv_timer_handler() and loop().
+  static void openPicker(CancelCallback onCancel = nullptr);
 
   static bool isConnected();
 
@@ -134,6 +144,8 @@ private:
   static void onRescanClicked(lv_event_t *e);
   static void onConnectClicked(lv_event_t *e);
   static void onBackClicked(lv_event_t *e);
+  static void onCancelClicked(lv_event_t *e);
+  static void addCancelRow();
   static void onHiddenClicked(lv_event_t *e);
   static void onLanguageChosen(lv_event_t *e);
   static void onLanguageToggleClicked(lv_event_t *e);
@@ -161,6 +173,8 @@ private:
   static uint8_t _maxSaved;
   static Language _lang;
   static bool _langChosen;
+  static bool _cancelable;
+  static CancelCallback _onCancel;
 
   static ConnectedCallback _onConnected;
   static StatusCallback _onStatus;

@@ -36,7 +36,7 @@ enum Str : uint8_t {
   S_TAG_OPEN, S_TAG_SAVED, S_TAG_OPEN_SAVED, S_CONNECTING_TO, S_CONNECTED,
   S_RECONNECTED, S_LOST, S_LOOKING_SAVED, S_SCAN_FAILED, S_NOT_FOUND,
   S_NO_SAVED_WORKED, S_COULDNT_CONNECT, S_WRONG_PASSWORD, S_HOLD_FORGET_HINT,
-  S_COULDNT_RECONNECT, S_FORGOT, S_LANGUAGE_TITLE, S_OTHER_LANGUAGE,
+  S_COULDNT_RECONNECT, S_FORGOT, S_LANGUAGE_TITLE, S_OTHER_LANGUAGE, S_CANCEL,
   S_STR_COUNT
 };
 
@@ -81,6 +81,7 @@ const char *const STRINGS[S_STR_COUNT][2] = {
   /* S_FORGOT           */ {"Forgot ", "Olvidada: "},
   /* S_LANGUAGE_TITLE   */ {"Language / Idioma", "Language / Idioma"},
   /* S_OTHER_LANGUAGE   */ {"Español", "English"}, // names the language a tap switches TO
+  /* S_CANCEL           */ {"Cancel", "Cancelar"},
 };
 
 const char *tr(Str s, TouchWifiProvisioner::Language lang) {
@@ -132,6 +133,8 @@ size_t TouchWifiProvisioner::_candIdx = 0;
 uint8_t TouchWifiProvisioner::_maxSaved = 5;
 TouchWifiProvisioner::Language TouchWifiProvisioner::_lang = TouchWifiProvisioner::Language::English;
 bool TouchWifiProvisioner::_langChosen = false;
+bool TouchWifiProvisioner::_cancelable = false;
+TouchWifiProvisioner::CancelCallback TouchWifiProvisioner::_onCancel;
 
 TouchWifiProvisioner::ConnectedCallback TouchWifiProvisioner::_onConnected = nullptr;
 TouchWifiProvisioner::StatusCallback TouchWifiProvisioner::_onStatus = nullptr;
@@ -356,6 +359,8 @@ void TouchWifiProvisioner::loop() {
         rememberNetwork(_pendingSsid, _pendingPassword);
         _candidates.clear();
         _candIdx = 0;
+        _cancelable = false;
+        _onCancel = nullptr;
         teardownUi();
         _state = State::Connected;
         reportStatus(String(TR(S_CONNECTED)) + WiFi.localIP().toString());
@@ -512,6 +517,33 @@ void TouchWifiProvisioner::reset() {
   showPicker();
 }
 
+void TouchWifiProvisioner::openPicker(CancelCallback onCancel) {
+  _onCancel = onCancel;
+  _cancelable = true;
+  showPicker();
+}
+
+void TouchWifiProvisioner::addCancelRow() {
+  if (!_cancelable || !_list) return;
+  lv_obj_t *cancel = lv_list_add_btn(_list, LV_SYMBOL_CLOSE, TR(S_CANCEL));
+  styleListRow(cancel, /*accent=*/true);
+  lv_obj_add_event_cb(cancel, onCancelClicked, LV_EVENT_CLICKED, nullptr);
+}
+
+void TouchWifiProvisioner::onCancelClicked(lv_event_t *e) {
+  WiFi.scanDelete();
+  teardownUi();
+  _cancelable = false;
+  // Back to whatever the connection was doing before the picker opened.
+  _state = (WiFi.status() == WL_CONNECTED) ? State::Connected : State::WaitingReconnect;
+  _connectStartMs = millis();
+  _outageStartMs = _connectStartMs;
+  Serial.println("[TouchWifiProvisioner] Picker cancelled");
+  CancelCallback cb = _onCancel;
+  _onCancel = nullptr;
+  if (cb) cb();
+}
+
 bool TouchWifiProvisioner::isConnected() {
   return _state == State::Connected && WiFi.status() == WL_CONNECTED;
 }
@@ -547,6 +579,7 @@ void TouchWifiProvisioner::showPicker() {
   lv_obj_set_style_radius(_list, 14, 0);
   lv_obj_set_style_pad_all(_list, 4, 0);
 
+  addCancelRow();
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, TR(S_RESCAN));
   styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
@@ -575,6 +608,7 @@ void TouchWifiProvisioner::populateNetworkList() {
   Serial.printf("[TouchWifiProvisioner] Scan complete: %d network(s) found\n", count);
   lv_obj_clean(_list);
 
+  addCancelRow();
   lv_obj_t *rescan = lv_list_add_btn(_list, LV_SYMBOL_REFRESH, TR(S_RESCAN));
   styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
