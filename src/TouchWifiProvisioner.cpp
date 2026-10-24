@@ -297,7 +297,7 @@ void TouchWifiProvisioner::tryStoredCredentials() {
 void TouchWifiProvisioner::beginSavedScan() {
   _state = State::ScanningSaved;
   _emptyScanRetries = 0;
-  WiFi.scanNetworks(true);
+  WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
   reportStatus(TR(S_LOOKING_SAVED));
   Serial.printf("[TouchWifiProvisioner] %u saved networks - scanning to pick one\n",
                 (unsigned)_candidates.size());
@@ -462,7 +462,7 @@ void TouchWifiProvisioner::loop() {
       if (found >= 0 && found == 0 && _emptyScanRetries < MAX_EMPTY_SCAN_RETRIES) {
         _emptyScanRetries++;
         WiFi.scanDelete();
-        WiFi.scanNetworks(true);
+        WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
       } else if (found >= 0) {
         orderCandidates(found);
         WiFi.scanDelete();
@@ -470,7 +470,7 @@ void TouchWifiProvisioner::loop() {
       } else if (found == WIFI_SCAN_FAILED) {
         if (_emptyScanRetries < MAX_EMPTY_SCAN_RETRIES) {
           _emptyScanRetries++;
-          WiFi.scanNetworks(true);
+          WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
         } else {
           // Can't scan at all - just probe the saved networks in order.
           orderCandidates(0);
@@ -485,7 +485,7 @@ void TouchWifiProvisioner::loop() {
         populateNetworkList();
       } else if (found == WIFI_SCAN_FAILED) {
         reportStatus(TR(S_SCAN_FAILED));
-        WiFi.scanNetworks(true);
+        WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
       }
       break;
     }
@@ -584,7 +584,7 @@ void TouchWifiProvisioner::showPicker() {
   styleListRow(rescan, /*accent=*/true);
   lv_obj_add_event_cb(rescan, onRescanClicked, LV_EVENT_CLICKED, nullptr);
 
-  WiFi.scanNetworks(true);
+  WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
   reportStatus(TR(S_SCANNING_NETWORKS));
   Serial.println("[TouchWifiProvisioner] Scanning for networks...");
 }
@@ -601,7 +601,7 @@ void TouchWifiProvisioner::populateNetworkList() {
     Serial.printf("[TouchWifiProvisioner] Scan returned 0 networks, retrying (%d/%d)...\n",
                   _emptyScanRetries, MAX_EMPTY_SCAN_RETRIES);
     WiFi.scanDelete();
-    WiFi.scanNetworks(true);
+    WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
     return;
   }
 
@@ -801,7 +801,7 @@ void TouchWifiProvisioner::onListButtonLongPressed(lv_event_t *e) {
 void TouchWifiProvisioner::onRescanClicked(lv_event_t *e) {
   lv_obj_clean(_list);
   _emptyScanRetries = 0;
-  WiFi.scanNetworks(true);
+  WiFi.scanNetworks(true, false, false, SCAN_MS_PER_CHAN);
   _state = State::Scanning;
   reportStatus(TR(S_SCANNING_NETWORKS));
   Serial.println("[TouchWifiProvisioner] Rescan requested");

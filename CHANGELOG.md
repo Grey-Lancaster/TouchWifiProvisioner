@@ -5,6 +5,18 @@ All notable changes to this project are documented here. Versions follow
 minor odometer-style once patch would reach double digits (e.g.
 `0.4.9 + 0.0.4 = 0.5.3`, not `0.4.13`).
 
+## [1.6.8] - 2026-10-24
+
+### Fixed
+- **Network list stayed empty ("0 networks", Rescan did nothing) until the board was power-cycled.**
+  Arduino-ESP32 2.x gives an async scan a hidden timeout of `20 * max_ms_per_chan`
+  (6 s with the default 300 ms), and `scanComplete()` returns `WIFI_SCAN_FAILED` once
+  that has passed, even if the scan has already finished. A full scan takes about
+  6-7 s, so it raced the timeout: the picker then started a new scan, which aborted
+  the one still running and reported zero networks, over and over. Every async scan
+  now passes `max_ms_per_chan = 600` (a 12 s timeout), so scans complete reliably.
+  Seen on the Freenove ESP32-S3 boards; the same timeout applies to every ESP32.
+
 ## [1.6.4] - 2026-10-17
 
 ### Added

@@ -191,4 +191,10 @@ private:
   // that's not a real "no networks here" and deserves a few silent
   // retries before actually telling the user nothing was found.
   static const int MAX_EMPTY_SCAN_RETRIES = 3;
+  // Arduino-ESP32 2.x gives an async scan a hidden timeout of 20 * max_ms_per_chan
+  // (6 s at the 300 ms default) and scanComplete() reports WIFI_SCAN_FAILED once
+  // it passes, even if the scan finished. A full scan takes 6-7 s on the S3, so
+  // the default races that timeout; the retry then aborts the running scan and
+  // the picker shows "0 networks". 600 ms gives a 12 s timeout.
+  static const uint32_t SCAN_MS_PER_CHAN = 600;
 };
